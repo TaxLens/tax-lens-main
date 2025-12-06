@@ -66,17 +66,10 @@ class ApiClient {
   }
 
   // Gmail endpoints
-<<<<<<< HEAD
   async syncEmails(maxResults?: number, year?: number): Promise<SyncResult> {
     return this.request('/gmail/sync', {
       method: 'POST',
       body: JSON.stringify({ maxResults, year }),
-=======
-  async syncEmails(maxResults?: number): Promise<SyncResult> {
-    return this.request("/gmail/sync", {
-      method: "POST",
-      body: JSON.stringify({ maxResults }),
->>>>>>> master
     });
   }
 
@@ -89,7 +82,6 @@ class ApiClient {
     params?: TransactionParams
   ): Promise<TransactionResponse> {
     const searchParams = new URLSearchParams();
-<<<<<<< HEAD
     if (params?.category) searchParams.set('category', params.category);
     if (params?.taxReliefCategory) searchParams.set('taxReliefCategory', params.taxReliefCategory);
     if (params?.startDate) searchParams.set('startDate', params.startDate);
@@ -97,15 +89,6 @@ class ApiClient {
     if (params?.year) searchParams.set('year', params.year.toString());
     if (params?.limit) searchParams.set('limit', params.limit.toString());
     if (params?.offset) searchParams.set('offset', params.offset.toString());
-=======
-    if (params?.category) searchParams.set("category", params.category);
-    if (params?.taxReliefCategory)
-      searchParams.set("taxReliefCategory", params.taxReliefCategory);
-    if (params?.startDate) searchParams.set("startDate", params.startDate);
-    if (params?.endDate) searchParams.set("endDate", params.endDate);
-    if (params?.limit) searchParams.set("limit", params.limit.toString());
-    if (params?.offset) searchParams.set("offset", params.offset.toString());
->>>>>>> master
 
     const query = searchParams.toString();
     return this.request(`/transactions${query ? `?${query}` : ""}`);
@@ -129,21 +112,11 @@ class ApiClient {
     await this.request(`/transactions/${id}`, { method: "DELETE" });
   }
 
-<<<<<<< HEAD
   async getTransactionSummary(params?: { startDate?: string; endDate?: string; year?: number }): Promise<TransactionSummary> {
     const searchParams = new URLSearchParams();
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
     if (params?.year) searchParams.set('year', params.year.toString());
-=======
-  async getTransactionSummary(params?: {
-    startDate?: string;
-    endDate?: string;
-  }): Promise<TransactionSummary> {
-    const searchParams = new URLSearchParams();
-    if (params?.startDate) searchParams.set("startDate", params.startDate);
-    if (params?.endDate) searchParams.set("endDate", params.endDate);
->>>>>>> master
 
     const query = searchParams.toString();
     return this.request(

@@ -1,6 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -8,48 +7,19 @@ import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { api, Transaction, TransactionSummary, SyncStatus } from '@/lib/api';
-import { formatCurrency, getTaxReliefColor } from '@/lib/utils';
+import { calculateTax, formatCurrency, getTaxReliefColor, PERSONAL_RELIEF } from '@/lib/utils';
 import { 
   RefreshCw, 
   CreditCard, 
-=======
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { useSidebar } from "@/context/SidebarContext";
-import { Sidebar } from "@/components/Sidebar";
-import {
-  TransactionCard,
-  TransactionCardSkeleton,
-} from "@/components/TransactionCard";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
-import { ReceiptScannerModal } from "@/components/ReceiptScannerModal";
-import { api, Transaction, TransactionSummary, SyncStatus } from "@/lib/api";
-import {
-  formatCurrency,
-  getTaxReliefColor,
-  getCurrentMonthDateRange,
-  calculateTax,
-  PERSONAL_RELIEF,
-} from "@/lib/utils";
-import {
-  RefreshCw,
-  TrendingUp,
-  CreditCard,
->>>>>>> master
   Receipt,
   ArrowRight,
   CheckCircle2,
   AlertCircle,
   PiggyBank,
   FileText,
-<<<<<<< HEAD
   Calendar,
   ChevronDown
 } from 'lucide-react';
-=======
-} from "lucide-react";
->>>>>>> master
 import {
   BarChart,
   Bar,
@@ -59,6 +29,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import Link from "next/link";
+import { FloatingAddButton } from '@/components/FloatingAddButton';
+import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 
 // Get available tax years (current year and previous years with potential data)
 function getAvailableTaxYears(): number[] {
@@ -85,12 +57,8 @@ function getCurrentFilingYear(): number {
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
-<<<<<<< HEAD
   
   const [selectedYear, setSelectedYear] = useState<number>(getCurrentFilingYear());
-=======
-
->>>>>>> master
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
@@ -201,17 +169,9 @@ export default function DashboardPage() {
         .slice(0, 8)
     : [];
 
-<<<<<<< HEAD
   // Check if we're in filing period (March-April)
   const now = new Date();
   const isFilingPeriod = now.getMonth() >= 2 && now.getMonth() <= 3; // March = 2, April = 3
-=======
-  const { startDate } = getCurrentMonthDateRange();
-  const currentMonth = new Date().toLocaleDateString("en-MY", {
-    month: "long",
-    year: "numeric",
-  });
->>>>>>> master
 
   return (
     <div className="min-h-screen mesh-bg">
@@ -276,15 +236,8 @@ export default function DashboardPage() {
             disabled={isSyncing}
             className="flex items-center gap-2 px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 rounded-xl font-medium transition-all duration-200 text-white"
           >
-<<<<<<< HEAD
             <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'Scanning Emails...' : `Sync ${selectedYear} Emails`}
-=======
-            <RefreshCw
-              className={`w-5 h-5 ${isSyncing ? "animate-spin" : ""}`}
-            />
-            {isSyncing ? "Scanning Emails..." : "Sync Gmail"}
->>>>>>> master
           </button>
         </div>
 
@@ -421,13 +374,7 @@ export default function DashboardPage() {
         {/* Tax Relief Breakdown */}
         <div className="glass-card p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
-<<<<<<< HEAD
             <h2 className="text-lg font-semibold">Tax Relief Breakdown (YA {selectedYear})</h2>
-=======
-            <h2 className="text-lg font-semibold">
-              Tax Relief Breakdown (YA 2024)
-            </h2>
->>>>>>> master
             <Link
               href="/transactions"
               className="flex items-center gap-1 text-accent-400 hover:text-accent-300 text-sm font-medium transition-colors"
