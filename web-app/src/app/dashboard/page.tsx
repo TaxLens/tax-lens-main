@@ -16,6 +16,8 @@ import {
   formatCurrency,
   getTaxReliefColor,
   getCurrentMonthDateRange,
+  calculateTax,
+  PERSONAL_RELIEF,
 } from "@/lib/utils";
 import {
   RefreshCw,
@@ -55,6 +57,15 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const { isCollapsed: sidebarCollapsed } = useSidebar();
   const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
+  const [annualSalary, setAnnualSalary] = useState<number>(0);
+
+  // Load salary from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('user-annual-salary');
+    if (stored) {
+      setAnnualSalary(parseFloat(stored));
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -226,6 +237,13 @@ export default function DashboardPage() {
             isLoading={isLoadingData}
           />
         </div>
+
+        {/* Tax Summary Card */}
+        <TaxSummaryCard
+          annualSalary={annualSalary}
+          totalTaxRelief={summary?.totalTaxRelief || 0}
+          isLoading={isLoadingData}
+        />
 
         {/* Tax Relief Breakdown */}
         <div className="glass-card p-6 mb-8">
@@ -483,6 +501,105 @@ function StatCard({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TaxSummaryCard({
+  annualSalary,
+  totalTaxRelief,
+  isLoading,
+}: {
+  annualSalary: number;
+  totalTaxRelief: number;
+  isLoading: boolean;
+}) {
+  // Calculate tax with reliefs applied
+  const taxCalculation = calculateTax(annualSalary, totalTaxRelief);
+  const taxWithoutRelief = calculateTax(annualSalary, 0);
+  const taxSavings = taxWithoutRelief.taxPayable - taxCalculation.taxPayable;
+
+  if (annualSalary === 0) {
+    return (
+      <div className="glass-card p-6 mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold mb-1">Tax Estimation</h2>
+            <p className="text-midnight-400 text-sm">
+              Set your annual salary in Settings to see your tax calculation
+            </p>
+          </div>
+          <Link
+            href="/settings"
+            className="px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-xl font-medium transition-colors"
+          >
+            Set Salary
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-card p-6 mb-8">
+      <h2 className="text-lg font-semibold mb-4">Tax Estimation (YA 2024)</h2>
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-16 rounded skeleton" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+            <div>
+              <p className="text-midnight-400 text-sm mb-1">Annual Income</p>
+              <p className="text-xl font-bold font-mono">
+                {formatCurrency(annualSalary)}
+              </p>
+            </div>
+            <div>
+              <p className="text-midnight-400 text-sm mb-1">Total Deductions</p>
+              <p className="text-xl font-bold font-mono text-accent-400">
+                {formatCurrency(totalTaxRelief + PERSONAL_RELIEF)}
+              </p>
+              <p className="text-xs text-midnight-500">
+                (Personal: {formatCurrency(PERSONAL_RELIEF)} + Relief: {formatCurrency(totalTaxRelief)})
+              </p>
+            </div>
+            <div>
+              <p className="text-midnight-400 text-sm mb-1">Chargeable Income</p>
+              <p className="text-xl font-bold font-mono">
+                {formatCurrency(taxCalculation.chargeableIncome)}
+              </p>
+            </div>
+            <div>
+              <p className="text-midnight-400 text-sm mb-1">Estimated Tax</p>
+              <p className="text-2xl font-bold font-mono text-amber-400">
+                {formatCurrency(taxCalculation.taxPayable)}
+              </p>
+              <p className="text-xs text-midnight-500">
+                Effective rate: {taxCalculation.effectiveRate}%
+              </p>
+            </div>
+          </div>
+
+          {taxSavings > 0 && (
+            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="text-green-400 font-medium">Tax Savings from Relief</p>
+                <p className="text-sm text-midnight-400">
+                  Your tracked expenses saved you this much in taxes
+                </p>
+              </div>
+              <p className="text-2xl font-bold font-mono text-green-400">
+                {formatCurrency(taxSavings)}
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
