@@ -122,3 +122,138 @@ export function getCurrentYearDateRange(): { startDate: string; endDate: string 
     endDate: `${year}-12-31`,
   };
 }
+
+// ==========================================
+// Malaysian Tax Calculation (YA 2024)
+// Based on: https://www.hasil.gov.my/individu/kitaran-cukai-individu/lapor-pendapatan/kadar-cukai/
+// ==========================================
+
+// Personal relief that every individual taxpayer gets
+export const PERSONAL_RELIEF = 9000;
+
+// Malaysian progressive tax brackets for YA 2024
+export const MALAYSIAN_TAX_BRACKETS = [
+  { min: 0, max: 5000, rate: 0, cumulative: 0 },
+  { min: 5001, max: 20000, rate: 1, cumulative: 0 },
+  { min: 20001, max: 35000, rate: 3, cumulative: 150 },
+  { min: 35001, max: 50000, rate: 6, cumulative: 600 },
+  { min: 50001, max: 70000, rate: 11, cumulative: 1500 },
+  { min: 70001, max: 100000, rate: 19, cumulative: 3700 },
+  { min: 100001, max: 400000, rate: 25, cumulative: 9400 },
+  { min: 400001, max: 600000, rate: 26, cumulative: 84400 },
+  { min: 600001, max: 2000000, rate: 28, cumulative: 136400 },
+  { min: 2000001, max: Infinity, rate: 30, cumulative: 528400 },
+] as const;
+
+export interface TaxBracketInfo {
+  bracket: typeof MALAYSIAN_TAX_BRACKETS[number];
+  bracketIndex: number;
+  marginalRate: number;
+}
+
+export interface TaxCalculationResult {
+  annualIncome: number;
+  totalTaxRelief: number;
+  chargeableIncome: number;
+  taxPayable: number;
+  effectiveRate: number;
+  bracketInfo: TaxBracketInfo;
+}
+
+/**
+ * Get the tax bracket for a given chargeable income
+ */
+export function getTaxBracketInfo(chargeableIncome: number): TaxBracketInfo {
+  const income = Math.max(0, chargeableIncome);
+  
+  for (let i = 0; i < MALAYSIAN_TAX_BRACKETS.length; i++) {
+    const bracket = MALAYSIAN_TAX_BRACKETS[i];
+    if (income <= bracket.max) {
+      return {
+        bracket,
+        bracketIndex: i,
+        marginalRate: bracket.rate,
+      };
+    }
+  }
+  
+  // Default to highest bracket
+  const lastBracket = MALAYSIAN_TAX_BRACKETS[MALAYSIAN_TAX_BRACKETS.length - 1];
+  return {
+    bracket: lastBracket,
+    bracketIndex: MALAYSIAN_TAX_BRACKETS.length - 1,
+    marginalRate: lastBracket.rate,
+  };
+}
+
+/**
+ * Calculate progressive tax based on Malaysian tax brackets (YA 2024)
+ */
+export function calculateProgressiveTax(chargeableIncome: number): number {
+  if (chargeableIncome <= 0) return 0;
+  if (chargeableIncome <= 5000) return 0;
+  
+  let totalTax = 0;
+  let remainingIncome = chargeableIncome;
+  
+  for (const bracket of MALAYSIAN_TAX_BRACKETS) {
+    if (remainingIncome <= 0) break;
+    
+    const bracketSize = bracket.max - bracket.min + 1;
+    const taxableInBracket = Math.min(remainingIncome, bracket.max === Infinity ? remainingIncome : bracketSize);
+    
+    if (chargeableIncome > bracket.min) {
+      const incomeInThisBracket = Math.min(chargeableIncome, bracket.max) - bracket.min;
+      if (incomeInThisBracket > 0) {
+        totalTax += (incomeInThisBracket * bracket.rate) / 100;
+      }
+    }
+    
+    remainingIncome -= bracketSize;
+  }
+  
+  return Math.round(totalTax * 100) / 100;
+}
+
+/**
+ * Full tax calculation including reliefs
+ */
+export function calculateTax(
+  annualIncome: number,
+  totalTaxRelief: number = 0
+): TaxCalculationResult {
+  // Chargeable income = Annual income - Personal relief - Tax relief from deductions
+  const chargeableIncome = Math.max(0, annualIncome - PERSONAL_RELIEF - totalTaxRelief);
+  
+  // Calculate tax payable
+  const taxPayable = calculateProgressiveTax(chargeableIncome);
+  
+  // Effective tax rate
+  const effectiveRate = annualIncome > 0 ? (taxPayable / annualIncome) * 100 : 0;
+  
+  // Get bracket info
+  const bracketInfo = getTaxBracketInfo(chargeableIncome);
+  
+  return {
+    annualIncome,
+    totalTaxRelief,
+    chargeableIncome,
+    taxPayable,
+    effectiveRate: Math.round(effectiveRate * 100) / 100,
+    bracketInfo,
+  };
+}
+
+/**
+ * Format tax bracket as a readable string
+ */
+export function formatTaxBracket(bracketIndex: number): string {
+  const bracket = MALAYSIAN_TAX_BRACKETS[bracketIndex];
+  if (!bracket) return 'Unknown';
+  
+  if (bracket.max === Infinity) {
+    return `Above RM${(bracket.min - 1).toLocaleString()}`;
+  }
+  
+  return `RM${bracket.min.toLocaleString()} - RM${bracket.max.toLocaleString()}`;
+}
