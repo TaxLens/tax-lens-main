@@ -686,10 +686,10 @@ function TaxSummaryCard({
             <div>
               <p className="text-midnight-400 text-sm mb-1">Total Deductions</p>
               <p className="text-xl font-bold font-mono text-accent-400">
-                {formatCurrency(totalTaxRelief + PERSONAL_RELIEF)}
+                {formatCurrency(taxCalculation.totalDeductions)}
               </p>
               <p className="text-xs text-midnight-500">
-                (Personal: {formatCurrency(PERSONAL_RELIEF)} + Relief: {formatCurrency(totalTaxRelief)})
+                Personal + EPF + Tracked
               </p>
             </div>
             <div>
@@ -706,6 +706,16 @@ function TaxSummaryCard({
               <p className="text-xs text-midnight-500">
                 Effective rate: {taxCalculation.effectiveRate}%
               </p>
+            </div>
+          </div>
+
+          {/* Deduction Breakdown */}
+          <div className="p-4 bg-midnight-800/50 rounded-xl mb-4">
+            <p className="text-sm text-midnight-400 mb-2">Deduction Breakdown:</p>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <span>Personal Relief: <span className="font-mono text-white">{formatCurrency(PERSONAL_RELIEF)}</span></span>
+              <span>EPF Relief: <span className="font-mono text-white">{formatCurrency(taxCalculation.epfDetails.epfTaxRelief)}</span></span>
+              <span>Tracked Expenses: <span className="font-mono text-white">{formatCurrency(totalTaxRelief)}</span></span>
             </div>
           </div>
 

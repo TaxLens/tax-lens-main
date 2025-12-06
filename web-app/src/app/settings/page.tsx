@@ -22,7 +22,9 @@ import {
   formatCurrency, 
   calculateTax, 
   formatTaxBracket, 
-  PERSONAL_RELIEF 
+  PERSONAL_RELIEF,
+  EPF_EMPLOYEE_RATE,
+  EPF_RELIEF_LIMIT
 } from '@/lib/utils';
 
 const SALARY_STORAGE_KEY = 'user-annual-salary';
@@ -199,6 +201,27 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
+                {/* EPF Contribution Breakdown */}
+                <div className="py-3 border-b border-midnight-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-midnight-400 text-sm">EPF Contribution ({(EPF_EMPLOYEE_RATE * 100).toFixed(0)}% of salary)</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 p-3 bg-midnight-800/50 rounded-lg">
+                    <div>
+                      <p className="text-midnight-500 text-xs">Monthly</p>
+                      <p className="font-mono font-medium">{formatCurrency(taxCalculation.epfDetails.monthlyEPF)}</p>
+                    </div>
+                    <div>
+                      <p className="text-midnight-500 text-xs">Annual</p>
+                      <p className="font-mono font-medium">{formatCurrency(taxCalculation.epfDetails.annualEPF)}</p>
+                    </div>
+                    <div>
+                      <p className="text-midnight-500 text-xs">Tax Relief (max {formatCurrency(EPF_RELIEF_LIMIT)})</p>
+                      <p className="font-mono font-medium text-accent-400">{formatCurrency(taxCalculation.epfDetails.epfTaxRelief)}</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between py-3 border-b border-midnight-800">
                   <div>
                     <p className="text-midnight-400 text-sm">Personal Relief</p>
@@ -207,9 +230,19 @@ export default function SettingsPage() {
                   <Calculator className="w-5 h-5 text-midnight-500" />
                 </div>
 
+                <div className="flex items-center justify-between py-3 border-b border-midnight-800">
+                  <div>
+                    <p className="text-midnight-400 text-sm">Total Automatic Deductions</p>
+                    <p className="font-mono font-medium text-accent-400">
+                      {formatCurrency(PERSONAL_RELIEF + taxCalculation.epfDetails.epfTaxRelief)}
+                    </p>
+                    <p className="text-xs text-midnight-500">Personal + EPF Relief</p>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-midnight-400 text-sm">Estimated Tax (before deductions)</p>
+                    <p className="text-midnight-400 text-sm">Estimated Tax (before other deductions)</p>
                     <p className="font-mono font-bold text-xl text-amber-400">
                       {formatCurrency(taxCalculation.taxPayable)}
                     </p>
@@ -226,8 +259,9 @@ export default function SettingsPage() {
           <div className="mt-4 p-4 bg-midnight-800/50 rounded-xl flex items-start gap-3">
             <Info className="w-5 h-5 text-accent-400 shrink-0 mt-0.5" />
             <p className="text-sm text-midnight-400">
-              Your tax estimate will be calculated based on Malaysian LHDN rates for Year of Assessment 2024.
-              Tax relief from your tracked transactions will be applied on the Dashboard to show your final tax liability.
+              EPF contribution is calculated at {(EPF_EMPLOYEE_RATE * 100).toFixed(0)}% of your salary (employee rate for under 60 years old).
+              Tax relief for EPF is capped at {formatCurrency(EPF_RELIEF_LIMIT)} per year.
+              Additional tax relief from your tracked transactions will be applied on the Dashboard.
             </p>
           </div>
         </section>
