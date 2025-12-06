@@ -329,41 +329,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            icon={<CreditCard className="w-6 h-6" />}
-            label="Total Spending"
-            value={formatCurrency(summary?.total || 0)}
-            isLoading={isLoadingData}
-          />
-          <StatCard
-            icon={<Receipt className="w-6 h-6" />}
-            label="Transactions"
-            value={summary?.count?.toString() || "0"}
-            isLoading={isLoadingData}
-          />
-          <StatCard
-            icon={<PiggyBank className="w-6 h-6" />}
-            label="Tax Relief Eligible"
-            value={formatCurrency(summary?.totalTaxRelief || 0)}
-            isLoading={isLoadingData}
-            highlight
-          />
-          <StatCard
-            icon={<FileText className="w-6 h-6" />}
-            label="Categories Claimed"
-            value={Object.keys(summary?.byTaxRelief || {})
-              .filter(
-                (k) =>
-                  k !== "non_deductible" &&
-                  (summary?.byTaxRelief?.[k]?.amount || 0) > 0
-              )
-              .length.toString()}
-            isLoading={isLoadingData}
-          />
-        </div>
-
         {/* Tax Summary Card */}
         <TaxSummaryCard
           annualSalary={annualSalary}
@@ -579,52 +544,6 @@ export default function DashboardPage() {
           fetchData();
         }}
       />
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  isLoading,
-  highlight,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  isLoading: boolean;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`glass-card p-6 ${highlight ? "border-accent-500/30" : ""}`}
-    >
-      <div className="flex items-center gap-4">
-        <div
-          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            highlight
-              ? "bg-accent-500/20 text-accent-300"
-              : "bg-accent-500/10 text-accent-400"
-          }`}
-        >
-          {icon}
-        </div>
-        <div>
-          <p className="text-midnight-400 text-sm">{label}</p>
-          {isLoading ? (
-            <div className="h-8 w-24 rounded skeleton mt-1" />
-          ) : (
-            <p
-              className={`text-2xl font-bold font-mono ${
-                highlight ? "gradient-text" : ""
-              }`}
-            >
-              {value}
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
