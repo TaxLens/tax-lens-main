@@ -120,59 +120,52 @@ export default function ReliefPage() {
     <div className="min-h-screen mesh-bg">
       <Sidebar />
       
-      <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
+      <main className={`px-4 py-6 md:p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
           <div>
-            <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl font-display font-bold">
-                Tax Relief Categories
-              </h1>
-              
-              {/* Year Selector Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 bg-midnight-800 hover:bg-midnight-700 border border-midnight-600 rounded-lg transition-colors"
-                >
-                  <Calendar className="w-4 h-4 text-accent-400" />
-                  <span className="font-medium">{selectedYear}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {yearDropdownOpen && (
-                  <div className="absolute top-full mt-2 w-full bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 overflow-hidden">
-                    {availableYears.map((year) => (
-                      <button
-                        key={year}
-                        onClick={() => handleYearChange(year)}
-                        className={`w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors ${
-                          year === selectedYear ? 'bg-accent-500/20 text-accent-400' : ''
-                        }`}
-                      >
-                        {year}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <p className="text-midnight-400">
+            <h1 className="text-2xl md:text-3xl font-display font-bold mb-1">
+              Tax Relief Categories
+            </h1>
+            <p className="text-sm text-midnight-400">
               Track your tax deductions against LHDN limits for YA {selectedYear}
             </p>
           </div>
 
-          {/* Download Report Button */}
-          {!isLoading && (
-            <PDFDownloadButton
-              year={selectedYear}
-              annualSalary={annualSalary}
-              reliefData={summary?.byTaxRelief || {}}
-              totalTrackedRelief={summary?.totalTaxRelief || 0}
-              userName={user?.name}
-            />
-          )}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+            {/* Year Selector Pills */}
+            <div className="bg-midnight-900/50 p-1 rounded-xl border border-midnight-800 flex items-center gap-1">
+              {availableYears.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => handleYearChange(year)}
+                  className={`
+                    px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap
+                    ${
+                      selectedYear === year
+                        ? "bg-accent-500 text-white shadow-lg shadow-accent-500/20"
+                        : "text-midnight-400 hover:text-white hover:bg-midnight-800"
+                    }
+                  `}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+
+            {/* Download Report Button */}
+            {!isLoading && (
+              <div className="w-full sm:w-auto">
+                <PDFDownloadButton
+                  year={selectedYear}
+                  annualSalary={annualSalary}
+                  reliefData={summary?.byTaxRelief || {}}
+                  totalTrackedRelief={summary?.totalTaxRelief || 0}
+                  userName={user?.name}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Summary Card */}
