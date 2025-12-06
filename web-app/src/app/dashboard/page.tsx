@@ -1,29 +1,32 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { useSidebar } from '@/context/SidebarContext';
-import { Sidebar } from '@/components/Sidebar';
-import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
-import { api, Transaction, TransactionSummary, SyncStatus } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
-import { 
-  RefreshCw, 
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useSidebar } from "@/context/SidebarContext";
+import { Sidebar } from "@/components/Sidebar";
+import {
+  TransactionCard,
+  TransactionCardSkeleton,
+} from "@/components/TransactionCard";
+import { api, Transaction, TransactionSummary, SyncStatus } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
+import {
+  RefreshCw,
   ArrowRight,
   CheckCircle2,
   AlertCircle,
-  Settings
-} from 'lucide-react';
+  Settings,
+} from "lucide-react";
 import Link from "next/link";
-import { FloatingAddButton } from '@/components/FloatingAddButton';
-import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
+import { FloatingAddButton } from "@/components/FloatingAddButton";
+import { ReceiptScannerModal } from "@/components/ReceiptScannerModal";
 
 // New Dashboard Components
-import { TaxHealthCard } from '@/components/dashboard/TaxHealthCard';
-import { ActionCenter } from '@/components/dashboard/ActionCenter';
-import { ReliefProgressList } from '@/components/dashboard/ReliefProgressList';
-import { FilingReadinessWidget } from '@/components/dashboard/FilingReadinessWidget';
+import { TaxHealthCard } from "@/components/dashboard/TaxHealthCard";
+import { ActionCenter } from "@/components/dashboard/ActionCenter";
+import { ReliefProgressList } from "@/components/dashboard/ReliefProgressList";
+import { FilingReadinessWidget } from "@/components/dashboard/FilingReadinessWidget";
 
 // Get available tax years (current year and previous years with potential data)
 function getAvailableTaxYears(): number[] {
@@ -37,7 +40,7 @@ function getCurrentFilingYear(): number {
   const now = new Date();
   const currentYear = now.getFullYear();
   const month = now.getMonth() + 1; // 1-12
-  
+
   // Filing period is March 1 - April 30 of the following year
   // So if we're in March or April, we're likely filing for the previous year
   if (month >= 3 && month <= 4) {
@@ -50,8 +53,10 @@ function getCurrentFilingYear(): number {
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
-  
-  const [selectedYear, setSelectedYear] = useState<number>(getCurrentFilingYear());
+
+  const [selectedYear, setSelectedYear] = useState<number>(
+    getCurrentFilingYear()
+  );
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
@@ -69,7 +74,7 @@ export default function DashboardPage() {
 
   // Load salary from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem('user-annual-salary');
+    const stored = localStorage.getItem("user-annual-salary");
     if (stored) {
       setAnnualSalary(parseFloat(stored));
     }
@@ -159,9 +164,9 @@ export default function DashboardPage() {
               Tax overview for Year of Assessment {selectedYear}
             </p>
           </div>
-          
+
           <div className="w-full lg:w-auto">
-            <ActionCenter 
+            <ActionCenter
               selectedYear={selectedYear}
               availableYears={availableYears}
               onYearChange={setSelectedYear}
@@ -190,12 +195,11 @@ export default function DashboardPage() {
         )}
 
         {/* Bento Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-start">
           {/* Top Row - Tax Health Hero (Full Width or Top Section) */}
           {/* In this 3-col layout, we can make it span 3 cols */}
-          <div className="lg:col-span-3 h-[280px]">
-            <TaxHealthCard 
+          <div className="lg:col-span-3">
+            <TaxHealthCard
               annualSalary={annualSalary}
               totalTaxRelief={summary?.totalTaxRelief || 0}
               isLoading={isLoadingData}
@@ -204,16 +208,16 @@ export default function DashboardPage() {
 
           {/* Middle Row */}
           {/* Relief Progress (2/3) */}
-          <div className="lg:col-span-2 h-[400px]">
-            <ReliefProgressList 
+          <div className="lg:col-span-2">
+            <ReliefProgressList
               reliefs={summary?.byTaxRelief || {}}
               isLoading={isLoadingData}
             />
           </div>
 
           {/* Filing Readiness (1/3) */}
-          <div className="lg:col-span-1 h-[400px]">
-            <FilingReadinessWidget 
+          <div className="lg:col-span-1">
+            <FilingReadinessWidget
               annualSalary={annualSalary}
               hasTransactions={recentTransactions.length > 0}
               filingYear={selectedYear}
@@ -226,7 +230,9 @@ export default function DashboardPage() {
           <div className="lg:col-span-3">
             <div className="glass-card p-4 md:p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base md:text-lg font-semibold">Recent Transactions</h2>
+                <h2 className="text-base md:text-lg font-semibold">
+                  Recent Transactions
+                </h2>
                 <Link
                   href="/transactions"
                   className="flex items-center gap-1 text-accent-400 hover:text-accent-300 text-xs md:text-sm font-medium transition-colors"
@@ -248,7 +254,9 @@ export default function DashboardPage() {
                     <TransactionCard
                       key={transaction.id}
                       transaction={transaction}
-                      onClick={() => router.push(`/transactions?id=${transaction.id}`)}
+                      onClick={() =>
+                        router.push(`/transactions?id=${transaction.id}`)
+                      }
                     />
                   ))
                 ) : (
@@ -259,7 +267,9 @@ export default function DashboardPage() {
                       disabled={isSyncing}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-accent-500/10 hover:bg-accent-500/20 rounded-lg text-accent-400 text-sm transition-colors"
                     >
-                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                      <RefreshCw
+                        className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`}
+                      />
                       Sync Gmail
                     </button>
                   </div>
@@ -268,7 +278,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-
       </main>
 
       {/* Floating Add Button */}
