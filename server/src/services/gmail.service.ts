@@ -95,7 +95,40 @@ function getDateRangeForYear(year?: number): { startDate: string; endDate: strin
 }
 
 /**
+ * Extract email body from Gmail message payload
+ */
+function extractEmailBody(payload: any): string {
+  let body = '';
+  
+  if (payload?.body?.data) {
+    body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+  } else if (payload?.parts) {
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/plain' && part.body?.data) {
+        body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+        break;
+      }
+      if (part.mimeType === 'text/html' && part.body?.data && !body) {
+        body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+      }
+      // Handle nested parts (multipart messages)
+      if (part.parts) {
+        for (const nestedPart of part.parts) {
+          if (nestedPart.mimeType === 'text/plain' && nestedPart.body?.data) {
+            body = Buffer.from(nestedPart.body.data, 'base64').toString('utf-8');
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  return body;
+}
+
+/**
  * Fetch all primary inbox emails for a specific year or date range
+ * Optimized with parallel batch fetching for better performance
  * @param accessToken - Gmail access token
  * @param maxResults - Maximum number of emails to fetch
  * @param year - Optional year to fetch emails for (Jan 1 - Dec 31)
@@ -120,14 +153,14 @@ export async function fetchEmails(
   
   console.log(`Fetching emails with query: ${query}`);
 
-  const emails: EmailMessage[] = [];
+  // Step 1: Collect all message IDs first (this is fast, just IDs)
+  const messageIds: { id: string; threadId: string }[] = [];
   let pageToken: string | undefined;
 
-  // Fetch all emails (paginated) up to maxResults
   do {
     const listResponse = await gmail.users.messages.list({
       userId: 'me',
-      maxResults: Math.min(maxResults - emails.length, 100),
+      maxResults: Math.min(maxResults - messageIds.length, 100),
       q: query,
       pageToken,
     });
@@ -136,12 +169,30 @@ export async function fetchEmails(
     pageToken = listResponse.data.nextPageToken || undefined;
 
     for (const message of messages) {
-      if (!message.id || emails.length >= maxResults) continue;
+      if (message.id && messageIds.length < maxResults) {
+        messageIds.push({ id: message.id, threadId: message.threadId || '' });
+      }
+    }
+  } while (pageToken && messageIds.length < maxResults);
 
+  console.log(`Found ${messageIds.length} email IDs, fetching details in parallel...`);
+
+  // Step 2: Fetch message details in parallel batches
+  const FETCH_BATCH_SIZE = 25; // Parallel requests per batch
+  const emails: EmailMessage[] = [];
+  const totalBatches = Math.ceil(messageIds.length / FETCH_BATCH_SIZE);
+
+  for (let i = 0; i < messageIds.length; i += FETCH_BATCH_SIZE) {
+    const batchNum = Math.floor(i / FETCH_BATCH_SIZE) + 1;
+    const batch = messageIds.slice(i, i + FETCH_BATCH_SIZE);
+    const batchStartTime = Date.now();
+
+    // Fetch all messages in this batch in parallel
+    const batchPromises = batch.map(async ({ id, threadId }) => {
       try {
         const msgResponse = await gmail.users.messages.get({
           userId: 'me',
-          id: message.id,
+          id,
           format: 'full',
         });
 
@@ -151,47 +202,30 @@ export async function fetchEmails(
         const getHeader = (name: string) =>
           headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
 
-        // Extract body
-        let body = '';
-        const payload = msgData.payload;
-        
-        if (payload?.body?.data) {
-          body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
-        } else if (payload?.parts) {
-          for (const part of payload.parts) {
-            if (part.mimeType === 'text/plain' && part.body?.data) {
-              body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-              break;
-            }
-            if (part.mimeType === 'text/html' && part.body?.data && !body) {
-              body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-            }
-            // Handle nested parts (multipart messages)
-            if (part.parts) {
-              for (const nestedPart of part.parts) {
-                if (nestedPart.mimeType === 'text/plain' && nestedPart.body?.data) {
-                  body = Buffer.from(nestedPart.body.data, 'base64').toString('utf-8');
-                  break;
-                }
-              }
-            }
-          }
-        }
+        const body = extractEmailBody(msgData.payload);
 
-        emails.push({
-          id: message.id,
-          threadId: message.threadId || '',
+        return {
+          id,
+          threadId,
           subject: getHeader('Subject'),
           from: getHeader('From'),
           date: getHeader('Date'),
           snippet: msgData.snippet || '',
-          body: body.substring(0, 8000), // Increased limit for better context
-        });
+          body: body.substring(0, 8000),
+        } as EmailMessage;
       } catch (err) {
-        console.error(`Error fetching message ${message.id}:`, err);
+        console.error(`Error fetching message ${id.substring(0, 8)}...:`, err);
+        return null;
       }
-    }
-  } while (pageToken && emails.length < maxResults);
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    const validResults = batchResults.filter((r): r is EmailMessage => r !== null);
+    emails.push(...validResults);
+
+    const batchDuration = Date.now() - batchStartTime;
+    console.log(`   📥 Fetch batch ${batchNum}/${totalBatches}: ${validResults.length}/${batch.length} emails in ${batchDuration}ms`);
+  }
 
   console.log(`Fetched ${emails.length} emails from primary inbox for ${year || 'current'} year (${startDate}${endDate ? ` to ${endDate}` : ''})`);
   return emails;
