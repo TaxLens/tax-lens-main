@@ -7,30 +7,23 @@ import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { api, Transaction, TransactionSummary, SyncStatus } from '@/lib/api';
-import { calculateTax, formatCurrency, getTaxReliefColor, PERSONAL_RELIEF } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { 
   RefreshCw, 
-  CreditCard, 
-  Receipt,
   ArrowRight,
   CheckCircle2,
   AlertCircle,
-  PiggyBank,
-  FileText,
-  Calendar,
-  ChevronDown
+  Settings
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import Link from "next/link";
 import { FloatingAddButton } from '@/components/FloatingAddButton';
 import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
+
+// New Dashboard Components
+import { TaxHealthCard } from '@/components/dashboard/TaxHealthCard';
+import { ActionCenter } from '@/components/dashboard/ActionCenter';
+import { ReliefProgressList } from '@/components/dashboard/ReliefProgressList';
+import { FilingReadinessWidget } from '@/components/dashboard/FilingReadinessWidget';
 
 // Get available tax years (current year and previous years with potential data)
 function getAvailableTaxYears(): number[] {
@@ -70,7 +63,6 @@ export default function DashboardPage() {
     message: string;
   } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
   const { isCollapsed: sidebarCollapsed } = useSidebar();
   const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
   const [annualSalary, setAnnualSalary] = useState<number>(0);
@@ -136,11 +128,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleYearChange = (year: number) => {
-    setSelectedYear(year);
-    setYearDropdownOpen(false);
-  };
-
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center mesh-bg">
@@ -148,26 +135,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  // Prepare tax relief chart data
-  const taxReliefData = summary?.byTaxRelief
-    ? Object.entries(summary.byTaxRelief)
-        .filter(([key]) => key !== "non_deductible")
-        .map(([key, data]) => ({
-          name:
-            data.name.length > 20
-              ? data.name.substring(0, 18) + "..."
-              : data.name,
-          fullName: data.name,
-          claimed: Math.min(data.amount, data.limit),
-          remaining: data.remaining,
-          limit: data.limit,
-          color: getTaxReliefColor(key),
-        }))
-        .filter((d) => d.claimed > 0)
-        .sort((a, b) => b.claimed - a.claimed)
-        .slice(0, 8)
-    : [];
 
   // Check if we're in filing period (March-April)
   const now = new Date();
@@ -178,360 +145,132 @@ export default function DashboardPage() {
       <Sidebar />
 
       <main
-        className={`p-8 transition-all duration-300 ${
+        className={`px-4 py-6 md:p-8 transition-all duration-300 ${
           sidebarCollapsed ? "md:ml-20" : "md:ml-64"
         } ml-0 pt-16 md:pt-8`}
       >
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        {/* Header / Action Center */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
           <div>
-            <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl font-display font-bold">
-                Tax Year {selectedYear}
-              </h1>
-              
-              {/* Year Selector Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 bg-midnight-800 hover:bg-midnight-700 border border-midnight-600 rounded-lg transition-colors"
-                >
-                  <Calendar className="w-4 h-4 text-accent-400" />
-                  <span className="font-medium">{selectedYear}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {yearDropdownOpen && (
-                  <div className="absolute top-full mt-2 w-full bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 overflow-hidden">
-                    {availableYears.map((year) => (
-                      <button
-                        key={year}
-                        onClick={() => handleYearChange(year)}
-                        className={`w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors ${
-                          year === selectedYear ? 'bg-accent-500/20 text-accent-400' : ''
-                        }`}
-                      >
-                        {year}
-                        {year === getCurrentFilingYear() && (
-                          <span className="ml-2 text-xs text-accent-400">(filing now)</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <p className="text-midnight-400">
-              Malaysian Tax Filing • File by{' '}
-              <span className={isFilingPeriod && selectedYear === getCurrentFilingYear() ? 'text-amber-400 font-medium' : ''}>
-                30 April {selectedYear + 1}
-              </span>
+            <h1 className="text-2xl md:text-3xl font-display font-bold mb-1">
+              Dashboard
+            </h1>
+            <p className="text-sm text-midnight-400">
+              Tax overview for Year of Assessment {selectedYear}
             </p>
           </div>
-
-          {/* Sync Button */}
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="flex items-center gap-2 px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 rounded-xl font-medium transition-all duration-200 text-white"
-          >
-            <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Scanning Emails...' : `Sync ${selectedYear} Emails`}
-          </button>
+          
+          <div className="w-full lg:w-auto">
+            <ActionCenter 
+              selectedYear={selectedYear}
+              availableYears={availableYears}
+              onYearChange={setSelectedYear}
+              onSync={handleSync}
+              isSyncing={isSyncing}
+              syncStatus={syncStatus}
+              onFileMyTax={() => {}}
+            />
+          </div>
         </div>
 
-        {/* Filing Period Alert */}
-        {isFilingPeriod && selectedYear === getCurrentFilingYear() && (
-          <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-amber-400 shrink-0" />
-            <div>
-              <span className="text-amber-400 font-medium">Filing Period Active</span>
-              <span className="text-midnight-300 ml-2">
-                Submit your tax return for YA {selectedYear} by 30 April {selectedYear + 1}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Sync Result Message */}
+        {/* Notifications Area */}
         {syncResult && (
           <div
-            className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-slide-in-right ${
+            className={`mb-6 px-4 py-3 rounded-lg flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2 ${
               syncResult.success
                 ? "bg-accent-500/10 border border-accent-500/20 text-accent-400"
                 : "bg-coral-500/10 border border-coral-500/20 text-coral-400"
             }`}
           >
             {syncResult.success ? (
-              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
             ) : (
-              <AlertCircle className="w-5 h-5 shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0" />
             )}
             <span>{syncResult.message}</span>
           </div>
         )}
 
-        {/* Tax Filing Summary Card */}
-        <div className="glass-card p-6 mb-8 border-l-4 border-l-accent-500">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-accent-400" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">Tax Year {selectedYear} Summary</h2>
-                  <p className="text-sm text-midnight-400">
-                    Assessment Year {selectedYear} • Filing deadline: 30 April {selectedYear + 1}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                <div>
-                  <p className="text-sm text-midnight-400">Total Spending</p>
-                  <p className="text-xl font-bold font-mono">{formatCurrency(summary?.total || 0)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-midnight-400">Transactions</p>
-                  <p className="text-xl font-bold font-mono">{summary?.count || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-midnight-400">Tax Relief Eligible</p>
-                  <p className="text-xl font-bold font-mono gradient-text">{formatCurrency(summary?.totalTaxRelief || 0)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-midnight-400">Categories Used</p>
-                  <p className="text-xl font-bold font-mono">
-                    {Object.keys(summary?.byTaxRelief || {}).filter(k => k !== 'non_deductible' && (summary?.byTaxRelief?.[k]?.amount || 0) > 0).length}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="lg:border-l lg:border-midnight-700 lg:pl-6">
-              <div className="flex flex-col gap-2">
-                <a
-                  href="https://mytax.hasil.gov.my/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 rounded-lg text-white font-medium transition-colors"
+        {/* Bento Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          
+          {/* Top Row - Tax Health Hero (Full Width or Top Section) */}
+          {/* In this 3-col layout, we can make it span 3 cols */}
+          <div className="lg:col-span-3 h-[280px]">
+            <TaxHealthCard 
+              annualSalary={annualSalary}
+              totalTaxRelief={summary?.totalTaxRelief || 0}
+              isLoading={isLoadingData}
+            />
+          </div>
+
+          {/* Middle Row */}
+          {/* Relief Progress (2/3) */}
+          <div className="lg:col-span-2 h-[400px]">
+            <ReliefProgressList 
+              reliefs={summary?.byTaxRelief || {}}
+              isLoading={isLoadingData}
+            />
+          </div>
+
+          {/* Filing Readiness (1/3) */}
+          <div className="lg:col-span-1 h-[400px]">
+            <FilingReadinessWidget 
+              annualSalary={annualSalary}
+              hasTransactions={recentTransactions.length > 0}
+              filingYear={selectedYear}
+              currentYear={now.getFullYear()}
+              isFilingPeriod={isFilingPeriod}
+            />
+          </div>
+
+          {/* Bottom Row - Recent Activity (Full Width) */}
+          <div className="lg:col-span-3">
+            <div className="glass-card p-4 md:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base md:text-lg font-semibold">Recent Transactions</h2>
+                <Link
+                  href="/transactions"
+                  className="flex items-center gap-1 text-accent-400 hover:text-accent-300 text-xs md:text-sm font-medium transition-colors"
                 >
-                  File on MyTax
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-                <p className="text-xs text-midnight-500 text-center">
-                  LHDN e-Filing Portal
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tax Summary Card */}
-        <TaxSummaryCard
-          annualSalary={annualSalary}
-          totalTaxRelief={summary?.totalTaxRelief || 0}
-          isLoading={isLoadingData}
-          selectedYear={selectedYear}
-        />
-
-        {/* Tax Relief Breakdown */}
-        <div className="glass-card p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Tax Relief Breakdown (YA {selectedYear})</h2>
-            <Link
-              href="/transactions"
-              className="flex items-center gap-1 text-accent-400 hover:text-accent-300 text-sm font-medium transition-colors"
-            >
-              View all transactions
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {isLoadingData ? (
-            <div className="h-64 flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-accent-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : taxReliefData.length > 0 ? (
-            <>
-              <div className="h-72 chart-dark-bg">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={taxReliefData}
-                    layout="vertical"
-                    margin={{ left: 20, right: 20 }}
-                  >
-                    <XAxis
-                      type="number"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                      tickFormatter={(value) => `RM${value.toLocaleString()}`}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                      width={150}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="glass-card px-4 py-3 text-sm">
-                              <p className="font-medium mb-1">
-                                {data.fullName}
-                              </p>
-                              <p className="text-accent-400">
-                                Claimed: {formatCurrency(data.claimed)}
-                              </p>
-                              <p className="text-midnight-400">
-                                Limit: {formatCurrency(data.limit)}
-                              </p>
-                              <p className="text-amber-400">
-                                Remaining: {formatCurrency(data.remaining)}
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar
-                      dataKey="claimed"
-                      fill="#3b82f6"
-                      radius={[0, 4, 4, 0]}
-                      name="Claimed"
-                      background={false}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                  View all
+                  <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
+                </Link>
               </div>
 
-              {/* Tax Relief Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                {Object.entries(summary?.byTaxRelief || {})
-                  .filter(
-                    ([key, data]) => key !== "non_deductible" && data.amount > 0
-                  )
-                  .sort(([, a], [, b]) => b.amount - a.amount)
-                  .slice(0, 8)
-                  .map(([key, data]) => (
-                    <div
-                      key={key}
-                      className="p-4 rounded-xl bg-midnight-800/50 border border-midnight-700"
+              <div className="space-y-2 md:space-y-3">
+                {isLoadingData ? (
+                  <>
+                    <TransactionCardSkeleton />
+                    <TransactionCardSkeleton />
+                    <TransactionCardSkeleton />
+                  </>
+                ) : recentTransactions.length > 0 ? (
+                  recentTransactions.map((transaction) => (
+                    <TransactionCard
+                      key={transaction.id}
+                      transaction={transaction}
+                      onClick={() => router.push(`/transactions?id=${transaction.id}`)}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-midnight-400">
+                    <p className="mb-3 text-sm">No transactions found</p>
+                    <button
+                      onClick={handleSync}
+                      disabled={isSyncing}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-accent-500/10 hover:bg-accent-500/20 rounded-lg text-accent-400 text-sm transition-colors"
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: getTaxReliefColor(key) }}
-                        />
-                        <span className="text-xs text-midnight-400 truncate">
-                          {data.name}
-                        </span>
-                      </div>
-                      <div className="text-lg font-bold font-mono">
-                        {formatCurrency(Math.min(data.amount, data.limit))}
-                      </div>
-                      <div className="text-xs text-midnight-500">
-                        of {formatCurrency(data.limit)} limit
-                      </div>
-                      <div className="mt-2 h-1.5 bg-midnight-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.min(
-                              100,
-                              (data.amount / data.limit) * 100
-                            )}%`,
-                            backgroundColor: getTaxReliefColor(key),
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-midnight-400">
-              <div className="text-center">
-                <p className="mb-4">No tax-eligible transactions found yet.</p>
-                <button
-                  onClick={handleSync}
-                  disabled={isSyncing}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent-500/10 hover:bg-accent-500/20 rounded-lg text-accent-400 transition-colors"
-                >
-                  <RefreshCw
-                    className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`}
-                  />
-                  Sync your Gmail to detect transactions
-                </button>
+                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                      Sync Gmail
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Recent Transactions */}
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Recent Transactions</h2>
-            <Link
-              href="/transactions"
-              className="flex items-center gap-1 text-accent-400 hover:text-accent-300 text-sm font-medium transition-colors"
-            >
-              View all
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {isLoadingData ? (
-              <>
-                <TransactionCardSkeleton />
-                <TransactionCardSkeleton />
-                <TransactionCardSkeleton />
-              </>
-            ) : recentTransactions.length > 0 ? (
-              recentTransactions.map((transaction) => (
-                <TransactionCard
-                  key={transaction.id}
-                  transaction={transaction}
-                  onClick={() =>
-                    router.push(`/transactions?id=${transaction.id}`)
-                  }
-                />
-              ))
-            ) : (
-              <div className="text-center py-12 text-midnight-400">
-                <p className="mb-4">No transactions found</p>
-                <button
-                  onClick={handleSync}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent-500/10 hover:bg-accent-500/20 rounded-lg text-accent-400 transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Sync your Gmail to detect transactions
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Sync Status */}
-        {syncStatus && (
-          <div className="mt-6 text-center text-sm text-midnight-400">
-            {syncStatus.lastSyncAt
-              ? `Last synced: ${new Date(syncStatus.lastSyncAt).toLocaleString(
-                  "en-MY"
-                )}`
-              : "Never synced"}
-          </div>
-        )}
       </main>
 
       {/* Floating Add Button */}
@@ -545,130 +284,6 @@ export default function DashboardPage() {
           fetchData();
         }}
       />
-    </div>
-  );
-}
-
-function TaxSummaryCard({
-  annualSalary,
-  totalTaxRelief,
-  isLoading,
-  selectedYear,
-}: {
-  annualSalary: number;
-  totalTaxRelief: number;
-  isLoading: boolean;
-  selectedYear: number;
-}) {
-  // Calculate tax with reliefs applied
-  const taxCalculation = calculateTax(annualSalary, totalTaxRelief);
-  const taxWithoutRelief = calculateTax(annualSalary, 0);
-  const taxSavings = taxWithoutRelief.taxPayable - taxCalculation.taxPayable;
-
-  if (annualSalary === 0) {
-    return (
-      <div className="glass-card p-6 mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold mb-1">Tax Estimation</h2>
-            <p className="text-midnight-400 text-sm">
-              Set your annual salary in Settings to see your tax calculation
-            </p>
-          </div>
-          <Link
-            href="/settings"
-            className="px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-xl font-medium transition-colors"
-          >
-            Set Salary
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="glass-card p-6 mb-8">
-      <h2 className="text-lg font-semibold mb-4">Tax Estimation (YA {selectedYear})</h2>
-
-      {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-16 rounded skeleton" />
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-            <div>
-              <p className="text-midnight-400 text-sm mb-1">Annual Income</p>
-              <p className="text-xl font-bold font-mono">
-                {formatCurrency(annualSalary)}
-              </p>
-            </div>
-            <div className="relative group">
-              <p className="text-midnight-400 text-sm mb-1 flex items-center gap-1">
-                Total Deductions
-                <span className="text-midnight-500 cursor-help">ⓘ</span>
-              </p>
-              <p className="text-xl font-bold font-mono text-accent-400">
-                {formatCurrency(taxCalculation.totalDeductions)}
-              </p>
-              
-              {/* Tooltip */}
-              <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-midnight-900 border border-midnight-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                <p className="text-xs text-midnight-400 mb-2 font-medium">Breakdown:</p>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-midnight-400">Personal Relief</span>
-                    <span className="font-mono text-white">{formatCurrency(PERSONAL_RELIEF)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-midnight-400">EPF Relief</span>
-                    <span className="font-mono text-white">{formatCurrency(taxCalculation.epfDetails.epfTaxRelief)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-midnight-400">Tracked Expenses</span>
-                    <span className="font-mono text-white">{formatCurrency(totalTaxRelief)}</span>
-                  </div>
-                  <div className="border-t border-midnight-700 pt-1 mt-1 flex justify-between font-medium">
-                    <span className="text-midnight-300">Total</span>
-                    <span className="font-mono text-accent-400">{formatCurrency(taxCalculation.totalDeductions)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-midnight-400 text-sm mb-1">Chargeable Income</p>
-              <p className="text-xl font-bold font-mono">
-                {formatCurrency(taxCalculation.chargeableIncome)}
-              </p>
-            </div>
-            <div>
-              <p className="text-midnight-400 text-sm mb-1">Estimated Tax</p>
-              <p className="text-2xl font-bold font-mono text-amber-400">
-                {formatCurrency(taxCalculation.taxPayable)}
-              </p>
-              <p className="text-xs text-midnight-500">
-                Effective rate: {taxCalculation.effectiveRate}%
-              </p>
-            </div>
-          </div>
-
-          {taxSavings > 0 && (
-            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
-              <div>
-                <p className="text-green-400 font-medium">Tax Savings from Relief</p>
-                <p className="text-sm text-midnight-400">
-                  Your tracked expenses saved you this much in taxes
-                </p>
-              </div>
-              <p className="text-2xl font-bold font-mono text-green-400">
-                {formatCurrency(taxSavings)}
-              </p>
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }
