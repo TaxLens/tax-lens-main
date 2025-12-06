@@ -3,21 +3,29 @@
 @tailwind utilities;
 
 :root {
-  --background-primary: #0a1929;
-  --background-secondary: #102a43;
-  --accent-primary: #14b8a6;
-  --accent-secondary: #2dd4bf;
-  --text-primary: #f0f4f8;
-  --text-secondary: #9fb3c8;
+  --background-primary: #09090b;
+  --background-secondary: #171717;
+  --background-elevated: #27272a;
+  --accent-primary: #3b82f6;
+  --accent-secondary: #60a5fa;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --border-color: rgba(255, 255, 255, 0.08);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  background: var(--background-primary);
+  color-scheme: dark;
+}
+
 body {
   min-height: 100vh;
   background: var(--background-primary);
+  color: var(--text-primary);
 }
 
 /* Custom scrollbar */
@@ -39,17 +47,16 @@ body {
   background: var(--accent-secondary);
 }
 
-/* Glassmorphism card */
+/* Clean card style */
 .glass-card {
-  background: rgba(16, 42, 67, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(99, 179, 237, 0.1);
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
 }
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 50%, #5eead4 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -71,7 +78,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(45, 212, 191, 0.3),
+    rgba(59, 130, 246, 0.3),
     transparent
   );
   transition: left 0.5s;
@@ -81,14 +88,15 @@ body {
   left: 100%;
 }
 
-/* Mesh background pattern */
+/* Subtle mesh background pattern */
 .mesh-bg {
+  background-color: var(--background-primary);
   background-image: 
-    radial-gradient(at 40% 20%, rgba(20, 184, 166, 0.15) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(45, 212, 191, 0.1) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(14, 116, 144, 0.1) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(244, 63, 94, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(20, 184, 166, 0.1) 0px, transparent 50%);
+    radial-gradient(at 40% 20%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(96, 165, 250, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(37, 99, 235, 0.06) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(244, 63, 94, 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.06) 0px, transparent 50%);
 }
 
 /* Animated gradient border */
@@ -103,7 +111,7 @@ body {
   position: absolute;
   inset: -2px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #14b8a6, #0d9488, #f43f5e, #14b8a6);
+  background: linear-gradient(135deg, #3b82f6, #2563eb, #f43f5e, #3b82f6);
   background-size: 300% 300%;
   animation: gradient-rotate 4s ease infinite;
   z-index: -1;
@@ -118,9 +126,9 @@ body {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(99, 179, 237, 0.1) 25%,
-    rgba(99, 179, 237, 0.2) 50%,
-    rgba(99, 179, 237, 0.1) 75%
+    rgba(59, 130, 246, 0.1) 25%,
+    rgba(59, 130, 246, 0.2) 50%,
+    rgba(59, 130, 246, 0.1) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -147,4 +155,3 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
-
