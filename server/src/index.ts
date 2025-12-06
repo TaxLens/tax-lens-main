@@ -11,6 +11,14 @@ import taxgptRoutes from './routes/taxgpt.js';
 
 dotenv.config();
 
+// Disable logs in production
+if (process.env.NODE_ENV === 'production') {
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+  // We keep console.error and console.warn for critical issues
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
