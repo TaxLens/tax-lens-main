@@ -78,9 +78,12 @@ export function TaxHealthCard({
               </div>
             </div>
 
-            {/* Potential Savings */}
-            <div className="space-y-1">
-              <p className="text-sm text-midnight-400">Total Tax Savings</p>
+            {/* Savings from Tracked Expenses */}
+            <div className="space-y-1 relative group/savings">
+              <p className="text-sm text-midnight-400 flex items-center gap-1">
+                Savings from Expenses
+                <span className="w-4 h-4 rounded-full bg-midnight-700 text-midnight-400 text-xs flex items-center justify-center cursor-help hover:bg-midnight-600 transition-colors">?</span>
+              </p>
               <div className="flex items-baseline gap-2">
                 <span className={`text-2xl font-bold font-mono ${taxSavings > 0 ? 'text-green-400' : 'text-midnight-500'}`}>
                   {formatCurrency(taxSavings)}
@@ -88,6 +91,28 @@ export function TaxHealthCard({
                 {taxSavings > 0 && (
                   <TrendingDown className="w-4 h-4 text-green-400" />
                 )}
+              </div>
+              
+              {/* Tooltip */}
+              <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-midnight-900 border border-midnight-700 rounded-lg shadow-xl opacity-0 invisible group-hover/savings:opacity-100 group-hover/savings:visible transition-all duration-200 z-20">
+                <p className="text-xs text-midnight-400 mb-2 font-medium">How this is calculated:</p>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-midnight-300">Tax (Personal + EPF only):</span>
+                    <span className="font-mono text-white">{formatCurrency(taxWithoutRelief.taxPayable)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-300">Tax (+ Tracked Expenses):</span>
+                    <span className="font-mono text-white">{formatCurrency(taxCalculation.taxPayable)}</span>
+                  </div>
+                  <div className="border-t border-midnight-700 pt-1.5 mt-1.5 flex justify-between">
+                    <span className="text-green-400 font-medium">Extra savings:</span>
+                    <span className="font-mono text-green-400 font-bold">{formatCurrency(taxSavings)}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-midnight-500 mt-2 pt-2 border-t border-midnight-800">
+                  Tracked expenses: {formatCurrency(totalTaxRelief)}
+                </p>
               </div>
             </div>
 
