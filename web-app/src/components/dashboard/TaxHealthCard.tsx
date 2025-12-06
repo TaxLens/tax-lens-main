@@ -1,6 +1,6 @@
 "use client";
 
-import { calculateTax, formatCurrency, PERSONAL_RELIEF } from "@/lib/utils";
+import { calculateTax, formatCurrency, PERSONAL_RELIEF, formatTaxBracket } from "@/lib/utils";
 import {
   TrendingDown,
   TrendingUp,
@@ -73,8 +73,13 @@ export function TaxHealthCard({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Estimated Tax */}
-            <div className="space-y-1">
-              <p className="text-sm text-midnight-400">Estimated Tax Payable</p>
+            <div className="space-y-1 relative group/tax">
+              <p className="text-sm text-midnight-400 flex items-center gap-1">
+                Estimated Tax Payable
+                <span className="w-4 h-4 rounded-full bg-midnight-700 text-midnight-400 text-xs flex items-center justify-center cursor-help hover:bg-midnight-600 transition-colors">
+                  ?
+                </span>
+              </p>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold font-mono text-white">
                   {formatCurrency(taxCalculation.taxPayable)}
@@ -82,6 +87,59 @@ export function TaxHealthCard({
                 <span className="text-xs px-2 py-0.5 rounded-full bg-midnight-800 text-midnight-400 border border-midnight-700">
                   {effectiveRate}% Rate
                 </span>
+              </div>
+
+              {/* Tooltip */}
+              <div className="absolute left-0 top-full mt-2 w-[calc(100vw-3rem)] sm:w-80 max-w-[320px] p-3 bg-midnight-900 border border-midnight-700 rounded-lg shadow-xl opacity-0 invisible group-hover/tax:opacity-100 group-hover/tax:visible transition-all duration-200 z-50">
+                <p className="text-xs text-midnight-400 mb-2 font-medium">
+                  Tax calculation breakdown:
+                </p>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-midnight-300">Annual Income:</span>
+                    <span className="font-mono text-white">
+                      {formatCurrency(annualSalary)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-300">Total Deductions:</span>
+                    <span className="font-mono text-white">
+                      - {formatCurrency(taxCalculation.totalDeductions)}
+                    </span>
+                  </div>
+                  <div className="border-t border-midnight-700 pt-1.5 mt-1.5 flex justify-between">
+                    <span className="text-midnight-300 font-medium">Chargeable Income:</span>
+                    <span className="font-mono text-white font-bold">
+                      {formatCurrency(taxCalculation.chargeableIncome)}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3 pt-2 border-t border-midnight-800">
+                  <p className="text-xs text-midnight-400 mb-1.5">Progressive tax applied:</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-midnight-300">Tax Bracket:</span>
+                      <span className="font-mono text-yellow-400">
+                        {formatTaxBracket(taxCalculation.bracketInfo.bracketIndex)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-midnight-300">Marginal Rate:</span>
+                      <span className="font-mono text-yellow-400">
+                        {taxCalculation.bracketInfo.marginalRate}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-midnight-700 pt-1.5 mt-1.5">
+                      <span className="text-white font-medium">Tax Payable:</span>
+                      <span className="font-mono text-white font-bold">
+                        {formatCurrency(taxCalculation.taxPayable)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-midnight-500 mt-2 pt-2 border-t border-midnight-800">
+                  Effective rate: {effectiveRate}% of income
+                </p>
               </div>
             </div>
 
@@ -144,12 +202,55 @@ export function TaxHealthCard({
             </div>
 
             {/* Total Deductions */}
-            <div className="space-y-1">
-              <p className="text-sm text-midnight-400">Total Deductions</p>
+            <div className="space-y-1 relative group/deductions">
+              <p className="text-sm text-midnight-400 flex items-center gap-1">
+                Total Deductions
+                <span className="w-4 h-4 rounded-full bg-midnight-700 text-midnight-400 text-xs flex items-center justify-center cursor-help hover:bg-midnight-600 transition-colors">
+                  ?
+                </span>
+              </p>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold font-mono text-accent-400">
                   {formatCurrency(taxCalculation.totalDeductions)}
                 </span>
+              </div>
+
+              {/* Tooltip */}
+              <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 w-[calc(100vw-3rem)] sm:w-72 max-w-[280px] p-3 bg-midnight-900 border border-midnight-700 rounded-lg shadow-xl opacity-0 invisible group-hover/deductions:opacity-100 group-hover/deductions:visible transition-all duration-200 z-50">
+                <p className="text-xs text-midnight-400 mb-2 font-medium">
+                  Deductions breakdown:
+                </p>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-midnight-300">Personal Relief:</span>
+                    <span className="font-mono text-white">
+                      {formatCurrency(PERSONAL_RELIEF)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-300">
+                      EPF Relief (11%, max RM4k):
+                    </span>
+                    <span className="font-mono text-white">
+                      {formatCurrency(taxCalculation.epfDetails.epfTaxRelief)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-300">Tracked Expenses:</span>
+                    <span className="font-mono text-white">
+                      {formatCurrency(totalTaxRelief)}
+                    </span>
+                  </div>
+                  <div className="border-t border-midnight-700 pt-1.5 mt-1.5 flex justify-between">
+                    <span className="text-accent-400 font-medium">Total:</span>
+                    <span className="font-mono text-accent-400 font-bold">
+                      {formatCurrency(taxCalculation.totalDeductions)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-midnight-500 mt-2 pt-2 border-t border-midnight-800">
+                  Chargeable income: {formatCurrency(taxCalculation.chargeableIncome)}
+                </p>
               </div>
             </div>
           </div>
