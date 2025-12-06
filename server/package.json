@@ -11,11 +11,15 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "@supabase/supabase-js": "^2.47.10",
+    "@types/multer": "^2.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "googleapis": "^144.0.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "pdf-parse": "^1.1.1",
+    "pdf2pic": "^3.2.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -26,4 +30,3 @@
     "typescript": "^5.7.2"
   }
 }
-

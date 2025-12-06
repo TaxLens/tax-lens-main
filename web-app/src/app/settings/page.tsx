@@ -13,8 +13,19 @@ import {
   Shield, 
   ExternalLink,
   RefreshCw,
-  CheckCircle2
+  CheckCircle2,
+  DollarSign,
+  Calculator,
+  Info
 } from 'lucide-react';
+import { 
+  formatCurrency, 
+  calculateTax, 
+  formatTaxBracket, 
+  PERSONAL_RELIEF 
+} from '@/lib/utils';
+
+const SALARY_STORAGE_KEY = 'user-annual-salary';
 
 export default function SettingsPage() {
   const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth();
@@ -22,6 +33,21 @@ export default function SettingsPage() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const { isCollapsed: sidebarCollapsed } = useSidebar();
+  
+  // Salary state
+  const [annualSalary, setAnnualSalary] = useState<number>(0);
+  const [salaryInput, setSalaryInput] = useState<string>('');
+  const [isSalarySaved, setIsSalarySaved] = useState(false);
+
+  // Load salary from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(SALARY_STORAGE_KEY);
+    if (stored) {
+      const salary = parseFloat(stored);
+      setAnnualSalary(salary);
+      setSalaryInput(salary.toString());
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -32,6 +58,17 @@ export default function SettingsPage() {
       api.getSyncStatus().then(setSyncStatus).catch(console.error);
     }
   }, [isAuthenticated, authLoading, router]);
+
+  const handleSaveSalary = () => {
+    const salary = parseFloat(salaryInput) || 0;
+    setAnnualSalary(salary);
+    localStorage.setItem(SALARY_STORAGE_KEY, salary.toString());
+    setIsSalarySaved(true);
+    setTimeout(() => setIsSalarySaved(false), 2000);
+  };
+
+  // Calculate tax based on salary (without reliefs for preview)
+  const taxCalculation = calculateTax(annualSalary, 0);
 
   const handleReconnectGmail = async () => {
     setIsReconnecting(true);
@@ -103,6 +140,95 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Income & Tax Section */}
+        <section className="glass-card p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-accent-400" />
+            Income & Tax (YA 2024)
+          </h2>
+          
+          <div className="space-y-4">
+            {/* Annual Salary Input */}
+            <div className="py-3 border-b border-midnight-800">
+              <label className="block text-midnight-400 text-sm mb-2">
+                Annual Gross Salary (RM)
+              </label>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-midnight-500">RM</span>
+                  <input
+                    type="number"
+                    value={salaryInput}
+                    onChange={(e) => setSalaryInput(e.target.value)}
+                    placeholder="e.g. 60000"
+                    className="w-full pl-12 pr-4 py-3 bg-midnight-800 border border-midnight-700 rounded-xl text-white placeholder-midnight-500 focus:outline-none focus:border-accent-500 transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={handleSaveSalary}
+                  className="px-6 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+                >
+                  {isSalarySaved ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      Saved
+                    </>
+                  ) : (
+                    'Save'
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Tax Bracket Preview */}
+            {annualSalary > 0 && (
+              <>
+                <div className="flex items-center justify-between py-3 border-b border-midnight-800">
+                  <div>
+                    <p className="text-midnight-400 text-sm">Your Tax Bracket</p>
+                    <p className="font-medium text-accent-400">
+                      {formatTaxBracket(taxCalculation.bracketInfo.bracketIndex)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-midnight-400 text-sm">Marginal Rate</p>
+                    <p className="font-mono font-bold text-lg">{taxCalculation.bracketInfo.marginalRate}%</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-3 border-b border-midnight-800">
+                  <div>
+                    <p className="text-midnight-400 text-sm">Personal Relief</p>
+                    <p className="font-medium">{formatCurrency(PERSONAL_RELIEF)}</p>
+                  </div>
+                  <Calculator className="w-5 h-5 text-midnight-500" />
+                </div>
+
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-midnight-400 text-sm">Estimated Tax (before deductions)</p>
+                    <p className="font-mono font-bold text-xl text-amber-400">
+                      {formatCurrency(taxCalculation.taxPayable)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-midnight-400 text-sm">Effective Rate</p>
+                    <p className="font-mono">{taxCalculation.effectiveRate}%</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="mt-4 p-4 bg-midnight-800/50 rounded-xl flex items-start gap-3">
+            <Info className="w-5 h-5 text-accent-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-midnight-400">
+              Your tax estimate will be calculated based on Malaysian LHDN rates for Year of Assessment 2024.
+              Tax relief from your tracked transactions will be applied on the Dashboard to show your final tax liability.
+            </p>
           </div>
         </section>
 
