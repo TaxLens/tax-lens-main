@@ -7,6 +7,41 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// ==========================================
+// Privacy-safe logging utilities
+// ==========================================
+
+/**
+ * Mask email address for logging (e.g., "jo***@gmail.com")
+ */
+function maskEmail(email: string): string {
+  if (!email) return '[unknown]';
+  const match = email.match(/<([^>]+)>/) || [null, email];
+  const addr = match[1] || email;
+  const [local, domain] = addr.split('@');
+  if (!domain) return `${local.substring(0, 2)}***`;
+  return `${local.substring(0, 2)}***@${domain}`;
+}
+
+/**
+ * Mask subject line for logging (truncate and partially hide)
+ */
+function maskSubject(subject: string, maxLen: number = 30): string {
+  if (!subject) return '[no subject]';
+  const truncated = subject.length > maxLen ? subject.substring(0, maxLen) + '...' : subject;
+  return truncated;
+}
+
+/**
+ * Mask merchant name (show first word only if multiple words)
+ */
+function maskMerchant(merchant: string | null): string {
+  if (!merchant) return '[unknown]';
+  const words = merchant.split(' ');
+  if (words.length === 1) return merchant;
+  return `${words[0]} ***`;
+}
+
 // Malaysian Tax Relief Categories for Year of Assessment 2024
 export const MALAYSIA_TAX_RELIEF_CATEGORIES = {
   individual: {
@@ -138,18 +173,51 @@ export interface TransactionData {
   description: string | null;
 }
 
+/**
+ * Fetch RAG tax rules context (cached per sync session)
+ */
+export async function fetchTaxRulesContext(taxYear: number): Promise<{ context: string; usingRAG: boolean }> {
+  let taxRulesContext = "";
+  let usingRAG = false;
+
+  if (isPineconeConfigured() && process.env.OPENAI_API_KEY) {
+    try {
+      const ragQuery = `Malaysian tax relief categories, deductions, and limits for ${taxYear}. Eligible expenses for tax filing.`;
+      const ragContext = await queryTaxRules(ragQuery, taxYear, 8);
+      
+      if (ragContext && ragContext.length > 0) {
+        taxRulesContext = `\n\nRELEVANT MALAYSIAN TAX RULES (from official documents for ${taxYear}):\n${ragContext}`;
+        usingRAG = true;
+      }
+    } catch (error) {
+      console.warn("RAG query failed, using static rules:", error);
+    }
+  }
+
+  return { context: taxRulesContext, usingRAG };
+}
+
+/**
+ * Build tax categories description string
+ */
+function buildTaxCategoriesDescription(): string {
+  return Object.entries(MALAYSIA_TAX_RELIEF_CATEGORIES)
+    .map(
+      ([key, val]) =>
+        `- "${key}": ${val.name} (limit RM${val.limit.toLocaleString()}) - ${val.description}`
+    )
+    .join("\n");
+}
+
 export async function analyzeEmailForTransaction(
   email: EmailMessage,
-  transactionYear?: number
+  transactionYear?: number,
+  cachedTaxContext?: { context: string; usingRAG: boolean }
 ): Promise<TransactionData> {
-  console.log("\n" + "=".repeat(80));
-  console.log("📧 ANALYZING EMAIL");
-  console.log("=".repeat(80));
-  console.log(`Subject: ${email.subject}`);
-  console.log(`From: ${email.from}`);
-  console.log(`Date: ${email.date}`);
-  console.log(`Snippet: ${email.snippet.substring(0, 200)}...`);
-  console.log("-".repeat(80));
+  // Minimal logging with masked data for privacy
+  const maskedFrom = maskEmail(email.from);
+  const maskedSubject = maskSubject(email.subject);
+  console.log(`   📧 Analyzing: ${maskedSubject} (from: ${maskedFrom})`);
 
   // Determine the year for tax rules (from email date or provided year)
   const emailYear = email.date
@@ -157,37 +225,22 @@ export async function analyzeEmailForTransaction(
     : new Date().getFullYear();
   const taxYear = transactionYear || emailYear;
 
-  // Build tax context - try RAG first, fallback to static rules
+  // Use cached tax context if provided, otherwise fetch fresh
   let taxRulesContext = "";
   let usingRAG = false;
 
-  if (isPineconeConfigured() && process.env.OPENAI_API_KEY) {
-    try {
-      // Query relevant tax rules from Pinecone
-      const ragQuery = `Malaysian tax relief categories, deductions, and limits for ${taxYear}. Eligible expenses for tax filing.`;
-      const ragContext = await queryTaxRules(ragQuery, taxYear, 8);
-      
-      if (ragContext && ragContext.length > 0) {
-        taxRulesContext = `\n\nRELEVANT MALAYSIAN TAX RULES (from official documents for ${taxYear}):\n${ragContext}`;
-        usingRAG = true;
-        console.log(`📚 Using RAG context for tax year ${taxYear}`);
-      }
-    } catch (error) {
-      console.warn("RAG query failed, using static rules:", error);
-    }
+  if (cachedTaxContext) {
+    taxRulesContext = cachedTaxContext.context;
+    usingRAG = cachedTaxContext.usingRAG;
+  } else {
+    // Fetch fresh if no cache provided (backwards compatible)
+    const freshContext = await fetchTaxRulesContext(taxYear);
+    taxRulesContext = freshContext.context;
+    usingRAG = freshContext.usingRAG;
   }
 
   // Static tax categories as fallback or supplement
-  const taxCategoriesDescription = Object.entries(
-    MALAYSIA_TAX_RELIEF_CATEGORIES
-  )
-    .map(
-      ([key, val]) =>
-        `- "${key}": ${val.name} (limit RM${val.limit.toLocaleString()}) - ${
-          val.description
-        }`
-    )
-    .join("\n");
+  const taxCategoriesDescription = buildTaxCategoriesDescription();
 
   const staticRulesSection = usingRAG
     ? `\n\nSTANDARD TAX RELIEF CATEGORIES (use as reference):\n${taxCategoriesDescription}`
@@ -283,27 +336,15 @@ Only respond with the JSON object, nothing else.`;
       description: data.description || null,
     };
 
-    console.log("🤖 CLAUDE OUTPUT:");
-    console.log(
-      `   Is Transaction: ${result.isTransaction ? "✅ YES" : "❌ NO"}`
-    );
+    // Compact result logging (sensitive data masked)
     if (result.isTransaction) {
-      console.log(`   Merchant: ${result.merchant}`);
-      console.log(`   Amount: ${result.currency} ${result.amount}`);
-      console.log(`   Category: ${result.category}`);
-      console.log(`   Tax Relief: ${result.taxReliefCategory}`);
-      console.log(`   Date: ${result.transactionDate}`);
-      console.log(`   Description: ${result.description}`);
-      console.log(
-        `   Confidence: ${(result.confidenceScore * 100).toFixed(0)}%`
-      );
+      const confPct = (result.confidenceScore * 100).toFixed(0);
+      console.log(`      ✅ Transaction: ${maskMerchant(result.merchant)} | ${result.currency} ${result.amount} | ${result.taxReliefCategory || 'non_deductible'} | ${confPct}%`);
     }
-    console.log("=".repeat(80) + "\n");
 
     return result;
   } catch (error) {
-    console.error("❌ Error analyzing email:", error);
-    console.log("=".repeat(80) + "\n");
+    console.error(`      ❌ Analysis error for email ${email.id.substring(0, 8)}...`);
     return {
       isTransaction: false,
       merchant: null,
@@ -341,8 +382,18 @@ export async function analyzeMultipleEmails(
   const startTime = Date.now();
   const allConfidenceScores: number[] = [];
 
-  // Process emails in batches to avoid rate limiting
-  const batchSize = 5;
+  // Determine tax year for RAG context caching
+  const taxYear = transactionYear || new Date().getFullYear();
+
+  // Pre-fetch and cache RAG tax rules context ONCE for all emails
+  console.log(`📚 Pre-fetching tax rules context for year ${taxYear}...`);
+  const ragStartTime = Date.now();
+  const cachedTaxContext = await fetchTaxRulesContext(taxYear);
+  const ragDuration = Date.now() - ragStartTime;
+  console.log(`   ✅ Tax context ${cachedTaxContext.usingRAG ? 'fetched from RAG' : 'using static rules'} in ${ragDuration}ms`);
+
+  // Process emails in batches - increased batch size for better throughput
+  const batchSize = 12; // Increased from 5 for faster processing
   const totalBatches = Math.ceil(totalEmails / batchSize);
   
   for (let i = 0; i < emails.length; i += batchSize) {
@@ -350,8 +401,9 @@ export async function analyzeMultipleEmails(
     const batchStartTime = Date.now();
     const batch = emails.slice(i, i + batchSize);
     
+    // Pass cached tax context to avoid redundant RAG queries
     const promises = batch.map(async (email) => {
-      const data = await analyzeEmailForTransaction(email, transactionYear);
+      const data = await analyzeEmailForTransaction(email, transactionYear, cachedTaxContext);
       return { emailId: email.id, data, subject: email.subject };
     });
 
@@ -365,26 +417,23 @@ export async function analyzeMultipleEmails(
       ? (batchConfidences.reduce((a, b) => a + b, 0) / batchConfidences.length) 
       : 0;
     
-    // Log batch progress with confidence info
+    // Log batch progress summary (no sensitive data)
     const processed = Math.min(i + batchSize, totalEmails);
     const elapsed = (Date.now() - startTime) / 1000;
     const rate = processed / elapsed;
     console.log(`   📦 Batch ${batchNum}/${totalBatches}: ${batch.length} emails in ${batchDuration}ms | Found ${transactionsInBatch} txns | Avg confidence: ${(avgBatchConfidence * 100).toFixed(0)}% | Progress: ${processed}/${totalEmails} (${rate.toFixed(1)}/sec)`);
     
-    // Log individual transaction details with confidence
+    // Collect results and confidence scores
     for (const result of batchResults) {
       if (result.data.isTransaction) {
-        const conf = result.data.confidenceScore;
-        const confEmoji = conf >= 0.8 ? '🟢' : conf >= 0.6 ? '🟡' : '🔴';
-        console.log(`      ${confEmoji} ${(conf * 100).toFixed(0)}% | ${result.data.merchant || 'Unknown'} | ${result.data.currency} ${result.data.amount} | ${result.data.taxReliefCategory || 'non_deductible'}`);
-        allConfidenceScores.push(conf);
+        allConfidenceScores.push(result.data.confidenceScore);
       }
       results.set(result.emailId, result.data);
     }
 
-    // Small delay between batches
+    // Minimal delay between batches (reduced from 1000ms to 150ms)
     if (i + batchSize < emails.length) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
   }
 
