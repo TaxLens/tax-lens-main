@@ -136,7 +136,7 @@ export default function DashboardPage() {
           <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="flex items-center gap-2 px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 rounded-xl font-medium transition-all duration-200 text-midnight-950"
+            className="flex items-center gap-2 px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 rounded-xl font-medium transition-all duration-200 text-white"
           >
             <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'Scanning Emails...' : 'Sync Gmail'}
