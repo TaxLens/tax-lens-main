@@ -212,150 +212,129 @@ export default function ReliefPage() {
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {isLoading ? (
-            [...Array(9)].map((_, i) => (
-              <div key={i} className="glass-card p-5 h-40 skeleton" />
-            ))
-          ) : (
-            <>
-              {/* EPF Relief Card */}
-              {(() => {
-                const epfClaimed = epfDetails.epfTaxRelief;
-                const epfPercentage = (epfClaimed / EPF_RELIEF_LIMIT) * 100;
-                const epfRemaining = EPF_RELIEF_LIMIT - epfClaimed;
-                const epfMaxed = epfClaimed >= EPF_RELIEF_LIMIT;
-                const epfColor = '#22c55e';
-                
-                return (
-                  <div 
-                    className={`glass-card p-5 transition-all duration-200 hover:border-midnight-600 ${
-                      epfMaxed ? 'border-green-500/30' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: epfColor }}
-                        />
-                        <h3 className="font-medium text-sm">EPF (KWSP) Contribution</h3>
-                      </div>
-                      {epfMaxed && (
-                        <CheckCircle2 className="w-4 h-4 text-green-400" />
-                      )}
-                    </div>
-                    
-                    <div className="mb-3">
-                      <div className="flex items-baseline justify-between mb-1">
-                        <span className="text-xl font-bold font-mono" style={{ color: epfColor }}>
-                          {formatCurrency(epfClaimed)}
-                        </span>
-                        <span className="text-sm text-midnight-400">
-                          / {formatCurrency(EPF_RELIEF_LIMIT)}
-                        </span>
-                      </div>
+        {/* Categories List View */}
+        <div className="glass-card overflow-hidden">
+          <div className="p-6 border-b border-midnight-800">
+            <h3 className="font-semibold">Relief Categories Breakdown</h3>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-midnight-800 text-xs text-midnight-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 font-medium">Category</th>
+                  <th className="px-6 py-4 font-medium w-1/3">Usage</th>
+                  <th className="px-6 py-4 font-medium text-right">Claimed</th>
+                  <th className="px-6 py-4 font-medium text-right">Limit</th>
+                  <th className="px-6 py-4 font-medium text-right">Remaining</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-midnight-800/50">
+                {isLoading ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-6 py-4"><div className="h-4 w-32 skeleton rounded" /></td>
+                      <td className="px-6 py-4"><div className="h-2 w-full skeleton rounded" /></td>
+                      <td className="px-6 py-4"><div className="h-4 w-20 skeleton rounded ml-auto" /></td>
+                      <td className="px-6 py-4"><div className="h-4 w-20 skeleton rounded ml-auto" /></td>
+                      <td className="px-6 py-4"><div className="h-4 w-20 skeleton rounded ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : (
+                  <>
+                    {(() => {
+                      // Prepare standard categories data
+                      const categoriesData = deductibleCategories.map(category => {
+                        const reliefData = summary?.byTaxRelief?.[category.value];
+                        const claimed = reliefData?.amount || 0;
+                        const claimedCapped = Math.min(claimed, category.limit);
+                        const remaining = category.limit - claimedCapped;
+                        const percentage = (claimedCapped / category.limit) * 100;
+                        const isMaxed = claimedCapped >= category.limit;
+                        
+                        return {
+                          ...category,
+                          claimed: claimedCapped,
+                          remaining,
+                          percentage,
+                          isMaxed,
+                          isEPF: false
+                        };
+                      });
+
+                      // Prepare EPF data
+                      const epfClaimed = epfDetails.epfTaxRelief;
+                      const epfLimit = EPF_RELIEF_LIMIT;
+                      const epfPercentage = (epfClaimed / epfLimit) * 100;
+                      const epfRemaining = Math.max(0, epfLimit - epfClaimed);
+                      const epfIsMaxed = epfClaimed >= epfLimit;
                       
-                      {/* Progress Bar */}
-                      <div className="h-2 bg-midnight-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${Math.min(100, epfPercentage)}%`,
-                            backgroundColor: epfColor
-                          }}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-midnight-400">
-                        {annualSalary === 0 ? (
-                          <Link href="/settings" className="text-accent-400 hover:underline">
-                            Set salary in Settings
-                          </Link>
-                        ) : epfMaxed ? (
-                          <span className="text-green-400">Limit reached!</span>
-                        ) : (
-                          <>Remaining: <span className="font-mono text-white">{formatCurrency(epfRemaining)}</span></>
-                        )}
-                      </span>
-                      <span className="font-mono text-midnight-500">
-                        {epfPercentage.toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
-              
-              {deductibleCategories.map((category) => {
-              const reliefData = summary?.byTaxRelief?.[category.value];
-              const claimed = reliefData?.amount || 0;
-              const claimedCapped = Math.min(claimed, category.limit);
-              const remaining = category.limit - claimedCapped;
-              const percentage = (claimedCapped / category.limit) * 100;
-              const isMaxed = claimedCapped >= category.limit;
-              
-              return (
-                <div 
-                  key={category.value}
-                  className={`glass-card p-5 transition-all duration-200 hover:border-midnight-600 ${
-                    isMaxed ? 'border-green-500/30' : ''
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <h3 className="font-medium text-sm">{category.label}</h3>
-                    </div>
-                    {isMaxed && (
-                      <CheckCircle2 className="w-4 h-4 text-green-400" />
-                    )}
-                  </div>
-                  
-                  <div className="mb-3">
-                    <div className="flex items-baseline justify-between mb-1">
-                      <span className="text-xl font-bold font-mono" style={{ color: category.color }}>
-                        {formatCurrency(claimedCapped)}
-                      </span>
-                      <span className="text-sm text-midnight-400">
-                        / {formatCurrency(category.limit)}
-                      </span>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="h-2 bg-midnight-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${Math.min(100, percentage)}%`,
-                          backgroundColor: category.color
-                        }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-midnight-400">
-                      {isMaxed ? (
-                        <span className="text-green-400">Limit reached!</span>
-                      ) : (
-                        <>Remaining: <span className="font-mono text-white">{formatCurrency(remaining)}</span></>
-                      )}
-                    </span>
-                    <span className="font-mono text-midnight-500">
-                      {percentage.toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            </>
-          )}
+                      const epfData = {
+                        value: 'epf',
+                        label: 'EPF (KWSP) Contribution',
+                        color: '#22c55e',
+                        limit: epfLimit,
+                        claimed: epfClaimed,
+                        remaining: epfRemaining,
+                        percentage: epfPercentage,
+                        isMaxed: epfIsMaxed,
+                        isEPF: true
+                      };
+
+                      // Combine and sort all categories by percentage descending
+                      const allCategories = [epfData, ...categoriesData].sort((a, b) => b.percentage - a.percentage);
+
+                      return allCategories.map((item) => (
+                        <tr key={item.value} className="group hover:bg-midnight-800/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-2 h-8 rounded-full" style={{ backgroundColor: item.color }} />
+                              <div>
+                                <div className="font-medium text-sm text-white">{item.label}</div>
+                                {item.isEPF && annualSalary === 0 && (
+                                  <Link href="/settings" className="text-xs text-accent-400 hover:underline block mt-0.5">
+                                    Set annual salary
+                                  </Link>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="w-full">
+                              <div className="flex justify-between text-xs mb-1.5">
+                                <span className="text-midnight-400">{item.percentage.toFixed(0)}%</span>
+                                {item.isMaxed && <span className="text-green-400 font-medium flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Maxed</span>}
+                              </div>
+                              <div className="h-2 bg-midnight-800 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500"
+                                  style={{
+                                    width: `${Math.min(100, item.percentage)}%`,
+                                    backgroundColor: item.color
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono text-sm text-white">
+                            {formatCurrency(item.claimed)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono text-sm text-midnight-400">
+                            {formatCurrency(item.limit)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono text-sm">
+                            <span className={item.isMaxed ? 'text-midnight-500' : 'text-white'}>
+                              {formatCurrency(item.remaining)}
+                            </span>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Link to Transactions */}
