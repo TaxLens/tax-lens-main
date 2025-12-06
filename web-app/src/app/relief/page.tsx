@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useSidebar } from '@/context/SidebarContext';
+import { useYear } from '@/context/YearContext';
 import { Sidebar } from '@/components/Sidebar';
 import { api, TransactionSummary } from '@/lib/api';
 import { 
@@ -28,35 +29,17 @@ const PDFDownloadButton = dynamic(
   { ssr: false, loading: () => null }
 );
 
-// Get available tax years
-function getAvailableTaxYears(): number[] {
-  const currentYear = new Date().getFullYear();
-  return [currentYear, currentYear - 1, currentYear - 2];
-}
-
-// Get current filing year
-function getCurrentFilingYear(): number {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const month = now.getMonth() + 1;
-  if (month >= 3 && month <= 4) {
-    return currentYear - 1;
-  }
-  return currentYear;
-}
 
 export default function ReliefPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { isCollapsed: sidebarCollapsed } = useSidebar();
+  const { selectedYear, setSelectedYear, availableYears } = useYear();
   
-  const [selectedYear, setSelectedYear] = useState<number>(getCurrentFilingYear());
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
   const [annualSalary, setAnnualSalary] = useState<number>(0);
-  
-  const availableYears = getAvailableTaxYears();
   
   // Load salary from localStorage
   useEffect(() => {
