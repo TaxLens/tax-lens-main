@@ -26,65 +26,219 @@ Track your spending automatically by connecting your Gmail. SpendLens uses Claud
              └───────────┘       └───────────┘
 ```
 
-## Quick Start
+---
+
+## Quick Start Guide
 
 ### Prerequisites
 
-- Node.js 18+
-- A Supabase project
-- Google Cloud project with OAuth credentials and Gmail API enabled
-- Anthropic API key
+- Node.js 18+ installed
+- A Gmail account
+- (You'll create the other accounts in the steps below)
 
-### 1. Set Up Supabase
+---
 
-Create a new Supabase project and run the migration:
-
-```sql
--- Run in Supabase SQL Editor
--- See supabase/migrations/001_initial_schema.sql for full schema
-```
-
-### 2. Configure Backend
+### Step 1: Clone and Install Dependencies
 
 ```bash
+# Clone the repository
+git clone <your-repo-url>
+cd tax-lens-main
+
+# Install backend dependencies
 cd server
 npm install
 
-# Create .env file with:
-# PORT=3001
-# GOOGLE_CLIENT_ID=your_google_client_id
-# GOOGLE_CLIENT_SECRET=your_google_client_secret
-# GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
-# SUPABASE_URL=your_supabase_project_url
-# SUPABASE_SERVICE_KEY=your_supabase_service_role_key
-# ANTHROPIC_API_KEY=your_anthropic_api_key
-# JWT_SECRET=your_jwt_secret_min_32_chars
-# FRONTEND_URL=http://localhost:3000
-
-npm run dev
+# Install frontend dependencies
+cd ../web-app
+npm install
 ```
 
-### 3. Configure Frontend
+---
+
+### Step 2: Set Up Supabase (Database)
+
+1. Go to [supabase.com](https://supabase.com) and create a free account
+2. Click **"New Project"** and create a project
+3. Wait for the project to initialize (~2 minutes)
+4. Go to **SQL Editor** in the left sidebar
+5. Click **"New query"** and paste this SQL:
+
+```sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  google_access_token TEXT,
+  google_refresh_token TEXT,
+  last_sync_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Transactions table
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  email_id TEXT NOT NULL,
+  merchant TEXT,
+  amount DECIMAL(10, 2),
+  currency TEXT DEFAULT 'USD',
+  category TEXT,
+  transaction_date DATE,
+  email_subject TEXT,
+  email_snippet TEXT,
+  confidence_score DECIMAL(3, 2),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, email_id)
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+```
+
+6. Click **"Run"** - you should see "Success. No rows returned"
+7. Go to **Project Settings** → **API** and copy:
+   - **Project URL** (for `SUPABASE_URL`)
+   - **service_role key** (for `SUPABASE_SERVICE_KEY`)
+
+---
+
+### Step 3: Set Up Google OAuth
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (or select existing)
+3. **Enable Gmail API:**
+   - Go to **APIs & Services** → **Library**
+   - Search for "Gmail API" and click **Enable**
+4. **Configure OAuth Consent Screen:**
+   - Go to **APIs & Services** → **OAuth consent screen**
+   - Choose "External" and click Create
+   - Fill in App name, User support email, Developer email
+   - Click **Save and Continue** through the steps
+   - On "Test users", click **Add Users** and add your Gmail address
+5. **Create OAuth Credentials:**
+   - Go to **APIs & Services** → **Credentials**
+   - Click **Create Credentials** → **OAuth 2.0 Client ID**
+   - Application type: **Web application**
+   - Add Authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
+   - Click **Create**
+   - Copy the **Client ID** and **Client Secret**
+
+---
+
+### Step 4: Get Anthropic API Key
+
+1. Go to [console.anthropic.com](https://console.anthropic.com/)
+2. Create an account or sign in
+3. Go to **Settings** → **API Keys**
+4. Click **Create Key** and copy the key
+
+---
+
+### Step 5: Configure Environment Variables
+
+**Backend (`server/.env`):**
+
+```bash
+cd server
+```
+
+Create a file named `.env` with:
+
+```env
+# Server Configuration
+PORT=3001
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_KEY=your_supabase_service_role_key_here
+
+# Anthropic API Configuration
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# JWT Configuration (generate a random string, min 32 characters)
+JWT_SECRET=your_random_secret_key_at_least_32_characters
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
+```
+
+**Frontend (`web-app/.env.local`):**
 
 ```bash
 cd web-app
-npm install
-
-# Create .env.local file with:
-# NEXT_PUBLIC_API_URL=http://localhost:3001/api
-
-npm run dev
 ```
 
-### 4. Configure Google OAuth
+Create a file named `.env.local` with:
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create or select a project
-3. Enable the Gmail API
-4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
-5. Configure the OAuth consent screen
-6. Add authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
-7. Copy Client ID and Client Secret to your backend `.env`
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+```
+
+---
+
+### Step 6: Run the Application
+
+Open **two terminal windows**:
+
+**Terminal 1 - Backend:**
+```bash
+cd server
+npm run dev
+```
+You should see: `Server running on http://localhost:3001`
+
+**Terminal 2 - Frontend:**
+```bash
+cd web-app
+npm run dev
+```
+You should see: `Ready on http://localhost:3000`
+
+---
+
+### Step 7: Use the App
+
+1. Open [http://localhost:3000](http://localhost:3000) in your browser
+2. Click **"Sign in with Google"**
+3. Select your Google account and grant permissions
+4. Once logged in, click **"Sync Gmail"** to scan your emails
+5. View detected transactions in the dashboard!
+
+---
+
+## Troubleshooting
+
+### "Error 403: access_denied" when signing in
+- Your Google OAuth app is in testing mode
+- Go to Google Cloud Console → OAuth consent screen → Test users
+- Add your Gmail address as a test user
+
+### "redirect_uri_mismatch" error
+- The redirect URI in Google Console must exactly match: `http://localhost:3001/api/auth/google/callback`
+- No trailing slash, must be `http` not `https`
+
+### Backend won't start
+- Make sure all environment variables are set in `server/.env`
+- Check that Supabase URL and keys are correct
+
+### No transactions detected
+- Make sure you have receipt/invoice emails in your Gmail
+- The AI looks for emails with keywords like "receipt", "invoice", "payment", "order"
+
+---
 
 ## Project Structure
 
