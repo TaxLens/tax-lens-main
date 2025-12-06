@@ -6,6 +6,7 @@ import {
   analyzeReceiptImage,
   analyzeReceiptPdf,
 } from "../services/receipt.service.js";
+import { triggerAlertCheck } from "../services/alert.service.js";
 
 const router = Router();
 
@@ -218,6 +219,11 @@ router.post(
       if (error) {
         console.error("Error creating transaction:", error);
         return res.status(500).json({ error: "Failed to create transaction" });
+      }
+
+      // Trigger alert check for category utilization (async, non-blocking)
+      if (taxReliefCategory && taxReliefCategory !== 'non_deductible') {
+        triggerAlertCheck(userId);
       }
 
       res.json({
