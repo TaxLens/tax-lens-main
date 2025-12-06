@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
+import { FloatingAddButton } from '@/components/FloatingAddButton';
+import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { api, Transaction } from '@/lib/api';
 import { CATEGORIES, TAX_RELIEF_CATEGORIES, formatCurrency, formatDate, getCategoryColor, getCategoryLabel, getTaxReliefColor, getTaxReliefLabel, getTaxReliefLimit } from '@/lib/utils';
 import { 
@@ -33,6 +35,7 @@ function TransactionsContent() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Transaction>>({});
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -324,6 +327,19 @@ function TransactionsContent() {
           </div>
         )}
       </main>
+
+      {/* Floating Add Button */}
+      <FloatingAddButton onClick={() => setIsReceiptScannerOpen(true)} />
+
+      {/* Receipt Scanner Modal */}
+      <ReceiptScannerModal
+        isOpen={isReceiptScannerOpen}
+        onClose={() => setIsReceiptScannerOpen(false)}
+        onTransactionCreated={() => {
+          fetchTransactions();
+          setTotal((prev) => prev + 1);
+        }}
+      />
 
       {/* Transaction Details Slide-over */}
       {selectedTransaction && (

@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 class ApiClient {
   private token: string | null = null;
@@ -6,16 +7,16 @@ class ApiClient {
   setToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem('auth_token', token);
+      localStorage.setItem("auth_token", token);
     } else {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem("auth_token");
     }
   }
 
   getToken(): string | null {
     if (this.token) return this.token;
-    if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
+    if (typeof window !== "undefined") {
+      this.token = localStorage.getItem("auth_token");
     }
     return this.token;
   }
@@ -25,14 +26,14 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const token = this.getToken();
-    
+
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(options.headers as Record<string, string>),
     };
 
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -41,8 +42,10 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || 'Request failed');
+      const error = await response
+        .json()
+        .catch(() => ({ error: "Request failed" }));
+      throw new Error(error.error || "Request failed");
     }
 
     return response.json();
@@ -50,70 +53,116 @@ class ApiClient {
 
   // Auth endpoints
   async getAuthUrl(): Promise<{ url: string }> {
-    return this.request('/auth/google');
+    return this.request("/auth/google");
   }
 
   async getCurrentUser(): Promise<{ user: User }> {
-    return this.request('/auth/me');
+    return this.request("/auth/me");
   }
 
   async logout(): Promise<void> {
-    await this.request('/auth/logout', { method: 'POST' });
+    await this.request("/auth/logout", { method: "POST" });
     this.setToken(null);
   }
 
   // Gmail endpoints
   async syncEmails(maxResults?: number): Promise<SyncResult> {
-    return this.request('/gmail/sync', {
-      method: 'POST',
+    return this.request("/gmail/sync", {
+      method: "POST",
       body: JSON.stringify({ maxResults }),
     });
   }
 
   async getSyncStatus(): Promise<SyncStatus> {
-    return this.request('/gmail/status');
+    return this.request("/gmail/status");
   }
 
   // Transaction endpoints
-  async getTransactions(params?: TransactionParams): Promise<TransactionResponse> {
+  async getTransactions(
+    params?: TransactionParams
+  ): Promise<TransactionResponse> {
     const searchParams = new URLSearchParams();
-    if (params?.category) searchParams.set('category', params.category);
-    if (params?.taxReliefCategory) searchParams.set('taxReliefCategory', params.taxReliefCategory);
-    if (params?.startDate) searchParams.set('startDate', params.startDate);
-    if (params?.endDate) searchParams.set('endDate', params.endDate);
-    if (params?.limit) searchParams.set('limit', params.limit.toString());
-    if (params?.offset) searchParams.set('offset', params.offset.toString());
+    if (params?.category) searchParams.set("category", params.category);
+    if (params?.taxReliefCategory)
+      searchParams.set("taxReliefCategory", params.taxReliefCategory);
+    if (params?.startDate) searchParams.set("startDate", params.startDate);
+    if (params?.endDate) searchParams.set("endDate", params.endDate);
+    if (params?.limit) searchParams.set("limit", params.limit.toString());
+    if (params?.offset) searchParams.set("offset", params.offset.toString());
 
     const query = searchParams.toString();
-    return this.request(`/transactions${query ? `?${query}` : ''}`);
+    return this.request(`/transactions${query ? `?${query}` : ""}`);
   }
 
   async getTransaction(id: string): Promise<{ transaction: Transaction }> {
     return this.request(`/transactions/${id}`);
   }
 
-  async updateTransaction(id: string, data: Partial<Transaction>): Promise<{ transaction: Transaction }> {
+  async updateTransaction(
+    id: string,
+    data: Partial<Transaction>
+  ): Promise<{ transaction: Transaction }> {
     return this.request(`/transactions/${id}`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   }
 
   async deleteTransaction(id: string): Promise<void> {
-    await this.request(`/transactions/${id}`, { method: 'DELETE' });
+    await this.request(`/transactions/${id}`, { method: "DELETE" });
   }
 
-  async getTransactionSummary(params?: { startDate?: string; endDate?: string }): Promise<TransactionSummary> {
+  async getTransactionSummary(params?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<TransactionSummary> {
     const searchParams = new URLSearchParams();
-    if (params?.startDate) searchParams.set('startDate', params.startDate);
-    if (params?.endDate) searchParams.set('endDate', params.endDate);
+    if (params?.startDate) searchParams.set("startDate", params.startDate);
+    if (params?.endDate) searchParams.set("endDate", params.endDate);
 
     const query = searchParams.toString();
-    return this.request(`/transactions/stats/summary${query ? `?${query}` : ''}`);
+    return this.request(
+      `/transactions/stats/summary${query ? `?${query}` : ""}`
+    );
   }
 
-  async getTaxCategories(): Promise<{ categories: Record<string, TaxReliefCategoryInfo> }> {
-    return this.request('/transactions/tax-categories');
+  async getTaxCategories(): Promise<{
+    categories: Record<string, TaxReliefCategoryInfo>;
+  }> {
+    return this.request("/transactions/tax-categories");
+  }
+
+  // Receipt scanning endpoints
+  async scanReceipt(file: File): Promise<ReceiptScanResult> {
+    const token = this.getToken();
+    const formData = new FormData();
+    formData.append("receipt", file);
+
+    const response = await fetch(`${API_BASE_URL}/receipts/scan`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: "Request failed" }));
+      throw new Error(error.error || "Failed to scan receipt");
+    }
+
+    return response.json();
+  }
+
+  async createTransactionFromReceipt(
+    data: CreateTransactionData
+  ): Promise<{ success: boolean; transaction: Transaction }> {
+    return this.request("/receipts/create", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 }
 
@@ -194,6 +243,30 @@ export interface TransactionSummary {
   byMonth: Record<string, number>;
   totalTaxRelief: number;
   taxCategories: Record<string, TaxReliefCategoryInfo>;
+}
+
+export interface ReceiptScanResult {
+  success: boolean;
+  data: {
+    merchant: string | null;
+    amount: number | null;
+    currency: string;
+    category: string | null;
+    taxReliefCategory: string | null;
+    transactionDate: string | null;
+    description: string | null;
+    confidenceScore: number;
+  };
+}
+
+export interface CreateTransactionData {
+  merchant: string;
+  amount: number;
+  currency?: string;
+  category?: string | null;
+  taxReliefCategory?: string | null;
+  transactionDate?: string | null;
+  description?: string | null;
 }
 
 export const api = new ApiClient();

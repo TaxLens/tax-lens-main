@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { EmailMessage } from './gmail.service.js';
+import Anthropic from "@anthropic-ai/sdk";
+import { EmailMessage } from "./gmail.service.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -8,109 +8,117 @@ const anthropic = new Anthropic({
 // Malaysian Tax Relief Categories for Year of Assessment 2024
 export const MALAYSIA_TAX_RELIEF_CATEGORIES = {
   individual: {
-    name: 'Individual & Dependent Relatives',
+    name: "Individual & Dependent Relatives",
     limit: 9000,
-    description: 'Automatic relief for individual taxpayer',
+    description: "Automatic relief for individual taxpayer",
   },
   medical_parents: {
-    name: 'Medical Expenses for Parents',
+    name: "Medical Expenses for Parents",
     limit: 8000,
-    description: 'Medical treatment, special needs, carer expenses for parents',
+    description: "Medical treatment, special needs, carer expenses for parents",
   },
   medical_serious: {
-    name: 'Medical Expenses (Serious Diseases)',
+    name: "Medical Expenses (Serious Diseases)",
     limit: 10000,
-    description: 'Medical expenses for self/spouse/child for serious diseases, fertility treatment, vaccination',
+    description:
+      "Medical expenses for self/spouse/child for serious diseases, fertility treatment, vaccination",
   },
   disabled_equipment: {
-    name: 'Basic Supporting Equipment (Disabled)',
+    name: "Basic Supporting Equipment (Disabled)",
     limit: 6000,
-    description: 'Supporting equipment for disabled self/spouse/child/parent',
+    description: "Supporting equipment for disabled self/spouse/child/parent",
   },
   education_self: {
-    name: 'Education Fees (Self)',
+    name: "Education Fees (Self)",
     limit: 7000,
-    description: 'Course fees for skills/qualifications at recognized institutions',
+    description:
+      "Course fees for skills/qualifications at recognized institutions",
   },
   lifestyle: {
-    name: 'Lifestyle',
+    name: "Lifestyle",
     limit: 2500,
-    description: 'Books, computers, smartphones, tablets, sports equipment, gym membership, internet subscription',
+    description:
+      "Books, computers, smartphones, tablets, sports equipment, gym membership, internet subscription",
   },
   lifestyle_sports: {
-    name: 'Lifestyle - Sports (Additional)',
+    name: "Lifestyle - Sports (Additional)",
     limit: 1000,
-    description: 'Additional relief for sports equipment and activities',
+    description: "Additional relief for sports equipment and activities",
   },
   breastfeeding: {
-    name: 'Breastfeeding Equipment',
+    name: "Breastfeeding Equipment",
     limit: 1000,
-    description: 'Breastfeeding equipment for own use (women only, child under 2)',
+    description:
+      "Breastfeeding equipment for own use (women only, child under 2)",
   },
   childcare: {
-    name: 'Childcare Fees',
+    name: "Childcare Fees",
     limit: 3000,
-    description: 'Fees to registered childcare center/kindergarten for child 6 years and below',
+    description:
+      "Fees to registered childcare center/kindergarten for child 6 years and below",
   },
   sspn: {
-    name: 'SSPN (Education Savings)',
+    name: "SSPN (Education Savings)",
     limit: 8000,
-    description: 'Net deposit in Skim Simpanan Pendidikan Nasional',
+    description: "Net deposit in Skim Simpanan Pendidikan Nasional",
   },
   life_insurance_epf: {
-    name: 'Life Insurance & EPF',
+    name: "Life Insurance & EPF",
     limit: 7000,
-    description: 'Life insurance premiums and EPF contributions',
+    description: "Life insurance premiums and EPF contributions",
   },
   private_retirement: {
-    name: 'Private Retirement Scheme',
+    name: "Private Retirement Scheme",
     limit: 3000,
-    description: 'Contributions to PRS or deferred annuity scheme',
+    description: "Contributions to PRS or deferred annuity scheme",
   },
   education_medical_insurance: {
-    name: 'Education & Medical Insurance',
+    name: "Education & Medical Insurance",
     limit: 3000,
-    description: 'Insurance premiums for education or medical benefits',
+    description: "Insurance premiums for education or medical benefits",
   },
   socso: {
-    name: 'SOCSO Contribution',
+    name: "SOCSO Contribution",
     limit: 350,
-    description: 'Social security contributions (PERKESO)',
+    description: "Social security contributions (PERKESO)",
   },
   domestic_travel: {
-    name: 'Domestic Tourism',
+    name: "Domestic Tourism",
     limit: 1000,
-    description: 'Expenses on domestic travel, accommodation at registered premises',
+    description:
+      "Expenses on domestic travel, accommodation at registered premises",
   },
   ev_charging: {
-    name: 'EV Charging Facilities',
+    name: "EV Charging Facilities",
     limit: 2500,
-    description: 'Purchase, installation, rental, hire purchase of EV charging facilities',
+    description:
+      "Purchase, installation, rental, hire purchase of EV charging facilities",
   },
   spouse: {
-    name: 'Spouse Relief',
+    name: "Spouse Relief",
     limit: 4000,
-    description: 'Relief for spouse with no income or joint assessment',
+    description: "Relief for spouse with no income or joint assessment",
   },
   child: {
-    name: 'Child Relief',
+    name: "Child Relief",
     limit: 8000,
-    description: 'RM2,000 per child under 18, RM8,000 for child in higher education',
+    description:
+      "RM2,000 per child under 18, RM8,000 for child in higher education",
   },
   disabled_spouse: {
-    name: 'Disabled Spouse',
+    name: "Disabled Spouse",
     limit: 5000,
-    description: 'Additional relief for disabled spouse',
+    description: "Additional relief for disabled spouse",
   },
   disabled_child: {
-    name: 'Disabled Child',
+    name: "Disabled Child",
     limit: 6000,
-    description: 'Additional relief for disabled child',
+    description: "Additional relief for disabled child",
   },
   non_deductible: {
-    name: 'Non-Deductible',
+    name: "Non-Deductible",
     limit: 0,
-    description: 'Not eligible for tax relief',
+    description: "Not eligible for tax relief",
   },
 } as const;
 
@@ -131,18 +139,25 @@ export interface TransactionData {
 export async function analyzeEmailForTransaction(
   email: EmailMessage
 ): Promise<TransactionData> {
-  console.log('\n' + '='.repeat(80));
-  console.log('📧 ANALYZING EMAIL');
-  console.log('='.repeat(80));
+  console.log("\n" + "=".repeat(80));
+  console.log("📧 ANALYZING EMAIL");
+  console.log("=".repeat(80));
   console.log(`Subject: ${email.subject}`);
   console.log(`From: ${email.from}`);
   console.log(`Date: ${email.date}`);
   console.log(`Snippet: ${email.snippet.substring(0, 200)}...`);
-  console.log('-'.repeat(80));
+  console.log("-".repeat(80));
 
-  const taxCategoriesDescription = Object.entries(MALAYSIA_TAX_RELIEF_CATEGORIES)
-    .map(([key, val]) => `- "${key}": ${val.name} (limit RM${val.limit.toLocaleString()}) - ${val.description}`)
-    .join('\n');
+  const taxCategoriesDescription = Object.entries(
+    MALAYSIA_TAX_RELIEF_CATEGORIES
+  )
+    .map(
+      ([key, val]) =>
+        `- "${key}": ${val.name} (limit RM${val.limit.toLocaleString()}) - ${
+          val.description
+        }`
+    )
+    .join("\n");
 
   const prompt = `You are a Malaysian tax expert assistant. Analyze the following email and determine if it represents a legitimate spending transaction that could be used for Malaysian tax relief filing.
 
@@ -196,19 +211,19 @@ Only respond with the JSON object, nothing else.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: "claude-sonnet-4-20250514",
       max_tokens: 600,
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: prompt,
         },
       ],
     });
 
     const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (content.type !== "text") {
+      throw new Error("Unexpected response type");
     }
 
     // Parse the JSON response
@@ -219,16 +234,21 @@ Only respond with the JSON object, nothing else.`;
       isTransaction: Boolean(data.isTransaction),
       merchant: data.merchant || null,
       amount: data.amount ? Number(data.amount) : null,
-      currency: data.currency || 'MYR',
+      currency: data.currency || "MYR",
       category: data.category || null,
       taxReliefCategory: data.taxReliefCategory || null,
       transactionDate: data.transactionDate || null,
-      confidenceScore: Math.min(1, Math.max(0, Number(data.confidenceScore) || 0)),
+      confidenceScore: Math.min(
+        1,
+        Math.max(0, Number(data.confidenceScore) || 0)
+      ),
       description: data.description || null,
     };
 
-    console.log('🤖 CLAUDE OUTPUT:');
-    console.log(`   Is Transaction: ${result.isTransaction ? '✅ YES' : '❌ NO'}`);
+    console.log("🤖 CLAUDE OUTPUT:");
+    console.log(
+      `   Is Transaction: ${result.isTransaction ? "✅ YES" : "❌ NO"}`
+    );
     if (result.isTransaction) {
       console.log(`   Merchant: ${result.merchant}`);
       console.log(`   Amount: ${result.currency} ${result.amount}`);
@@ -236,19 +256,21 @@ Only respond with the JSON object, nothing else.`;
       console.log(`   Tax Relief: ${result.taxReliefCategory}`);
       console.log(`   Date: ${result.transactionDate}`);
       console.log(`   Description: ${result.description}`);
-      console.log(`   Confidence: ${(result.confidenceScore * 100).toFixed(0)}%`);
+      console.log(
+        `   Confidence: ${(result.confidenceScore * 100).toFixed(0)}%`
+      );
     }
-    console.log('='.repeat(80) + '\n');
+    console.log("=".repeat(80) + "\n");
 
     return result;
   } catch (error) {
-    console.error('❌ Error analyzing email:', error);
-    console.log('='.repeat(80) + '\n');
+    console.error("❌ Error analyzing email:", error);
+    console.log("=".repeat(80) + "\n");
     return {
       isTransaction: false,
       merchant: null,
       amount: null,
-      currency: 'MYR',
+      currency: "MYR",
       category: null,
       taxReliefCategory: null,
       transactionDate: null,
