@@ -19,6 +19,7 @@ interface PDFDownloadButtonProps {
   annualSalary: number;
   reliefData: ReliefData;
   totalTrackedRelief: number;
+  userName?: string | null;
 }
 
 export function PDFDownloadButton({
@@ -26,6 +27,7 @@ export function PDFDownloadButton({
   annualSalary,
   reliefData,
   totalTrackedRelief,
+  userName,
 }: PDFDownloadButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export function PDFDownloadButton({
           annualSalary={annualSalary}
           reliefData={reliefData}
           totalTrackedRelief={totalTrackedRelief}
+          userName={userName}
         />
       );
       const blob = await pdf(doc).toBlob();

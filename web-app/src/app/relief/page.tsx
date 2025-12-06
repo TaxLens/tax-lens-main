@@ -46,7 +46,7 @@ function getCurrentFilingYear(): number {
 }
 
 export default function ReliefPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { isCollapsed: sidebarCollapsed } = useSidebar();
   
@@ -170,6 +170,7 @@ export default function ReliefPage() {
               annualSalary={annualSalary}
               reliefData={summary?.byTaxRelief || {}}
               totalTrackedRelief={summary?.totalTaxRelief || 0}
+              userName={user?.name}
             />
           )}
         </div>
