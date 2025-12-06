@@ -1,5 +1,15 @@
 # TaxLens - AI-Powered Spending Tracker
 
+**⚠️ IMPORTANT: PLEASE READ THE [TESTING GUIDE](TESTING.md) FIRST ⚠️**
+
+**Judges/Testers must use the provided test account to fully experience the application features.**
+
+[👉 Click here for Test Account Credentials & Instructions](TESTING.md)
+
+> **Note:** As this is a Hackathon MVP, the app is currently unverified by Google. Access to sensitive Gmail permissions requires manual whitelisting of test users. Please use the provided test account to avoid access errors.
+
+---
+
 Track your spending automatically by connecting your Gmail. TaxLens uses Claude AI to detect transactions from receipts, invoices, and payment confirmations in your emails.
 
 ## Features
