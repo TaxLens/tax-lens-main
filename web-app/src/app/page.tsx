@@ -62,7 +62,7 @@ export default function HomePage() {
 
           <button
             onClick={login}
-            className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-accent-500 to-accent-600 rounded-2xl font-semibold text-lg text-midnight-950 transition-all duration-300 hover:shadow-lg hover:shadow-accent-500/25 hover:scale-105 animate-slide-up btn-glow"
+            className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-accent-500 to-accent-600 rounded-2xl font-semibold text-lg text-white transition-all duration-300 hover:shadow-lg hover:shadow-accent-500/25 hover:scale-105 animate-slide-up btn-glow"
             style={{ animationDelay: '0.3s' }}
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
