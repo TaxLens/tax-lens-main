@@ -209,7 +209,7 @@ export default function DashboardPage() {
             </div>
           ) : taxReliefData.length > 0 ? (
             <>
-              <div className="h-72">
+              <div className="h-72 chart-dark-bg">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={taxReliefData} layout="vertical" margin={{ left: 20, right: 20 }}>
                     <XAxis 
@@ -228,6 +228,7 @@ export default function DashboardPage() {
                       width={150}
                     />
                     <Tooltip
+                      cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
                           const data = payload[0].payload;
@@ -248,6 +249,7 @@ export default function DashboardPage() {
                       fill="#3b82f6"
                       radius={[0, 4, 4, 0]}
                       name="Claimed"
+                      background={false}
                     />
                   </BarChart>
                 </ResponsiveContainer>
