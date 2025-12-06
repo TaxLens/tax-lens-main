@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js';
 import { fetchEmails, refreshAccessToken } from '../services/gmail.service.js';
 import { analyzeMultipleEmails } from '../services/claude.service.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { triggerAlertCheck } from '../services/alert.service.js';
 
 const router = Router();
 
@@ -116,6 +117,15 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
 
       if (insertError) {
         console.error('Error inserting transactions:', insertError);
+      } else {
+        // Trigger alert check for category utilization (async, non-blocking)
+        // Only if we inserted tax-deductible transactions
+        const hasTaxDeductible = transactionsToInsert.some(
+          t => t.tax_relief_category && t.tax_relief_category !== 'non_deductible'
+        );
+        if (hasTaxDeductible) {
+          triggerAlertCheck(userId);
+        }
       }
     }
 

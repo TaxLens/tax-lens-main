@@ -83,6 +83,33 @@ Note: The filename may contain useful information like destinations (e.g., "KUL 
 }
 
 /**
+ * Clean and validate base64 image data
+ */
+function cleanBase64(base64: string): string {
+  // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
+  const base64Match = base64.match(/^data:image\/[a-z]+;base64,(.+)$/i);
+  if (base64Match) {
+    return base64Match[1];
+  }
+  return base64;
+}
+
+/**
+ * Validate that base64 string is properly formatted
+ */
+function isValidBase64(str: string): boolean {
+  try {
+    // Check if the string is valid base64
+    const decoded = Buffer.from(str, 'base64');
+    const reencoded = decoded.toString('base64');
+    // Allow for padding differences
+    return str.replace(/=/g, '') === reencoded.replace(/=/g, '');
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Analyze a receipt image using Claude Vision API
  */
 export async function analyzeReceiptImage(
@@ -94,8 +121,26 @@ export async function analyzeReceiptImage(
   console.log("🧾 ANALYZING RECEIPT IMAGE");
   console.log("=".repeat(80));
   console.log(`MIME Type: ${mimeType}`);
-  console.log(`Image size: ${Math.round(imageBase64.length / 1024)} KB`);
+  console.log(`Raw base64 length: ${imageBase64.length} chars`);
   if (filename) console.log(`Filename: ${filename}`);
+  
+  // Clean the base64 data
+  const cleanedBase64 = cleanBase64(imageBase64);
+  const imageSizeKB = Math.round((cleanedBase64.length * 3) / 4 / 1024);
+  console.log(`Cleaned base64 size: ~${imageSizeKB} KB`);
+  
+  // Validate base64
+  if (!cleanedBase64 || cleanedBase64.length < 100) {
+    console.error("❌ Base64 data is too short or empty");
+    return createEmptyResult();
+  }
+  
+  // Check if image is too large (Claude has a ~20MB limit for images)
+  if (imageSizeKB > 20000) {
+    console.error(`❌ Image too large: ${imageSizeKB} KB (max ~20MB)`);
+    return createEmptyResult();
+  }
+  
   console.log("-".repeat(80));
 
   try {
@@ -111,7 +156,7 @@ export async function analyzeReceiptImage(
               source: {
                 type: "base64",
                 media_type: mimeType,
-                data: imageBase64,
+                data: cleanedBase64,
               },
             },
             {
@@ -148,8 +193,15 @@ export async function analyzeReceiptImage(
 
     logResult(result);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error analyzing receipt image:", error);
+    
+    // Provide more helpful error messages
+    if (error?.status === 400 && error?.error?.error?.message?.includes('Could not process image')) {
+      console.error("💡 Tip: The image may be corrupted, in an unsupported format, or the file type doesn't match the actual content.");
+      console.error("   Try: Re-saving the image in a standard format (JPEG/PNG) or taking a new photo.");
+    }
+    
     console.log("=".repeat(80) + "\n");
     return createEmptyResult();
   }

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { getTaxReliefCategories, MALAYSIA_TAX_RELIEF_CATEGORIES } from '../services/claude.service.js';
+import { triggerAlertCheck } from '../services/alert.service.js';
 
 const router = Router();
 
@@ -121,6 +122,12 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) 
 
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // Trigger alert check if tax relief category was updated to a deductible category
+    const newTaxCategory = transaction.tax_relief_category;
+    if (newTaxCategory && newTaxCategory !== 'non_deductible') {
+      triggerAlertCheck(userId);
     }
 
     res.json({ transaction });
