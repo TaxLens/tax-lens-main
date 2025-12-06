@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
+import { useYear } from "@/context/YearContext";
 import { Sidebar } from "@/components/Sidebar";
 import {
   TransactionCard,
@@ -28,35 +29,11 @@ import { ActionCenter } from "@/components/dashboard/ActionCenter";
 import { ReliefProgressList } from "@/components/dashboard/ReliefProgressList";
 import { FilingReadinessWidget } from "@/components/dashboard/FilingReadinessWidget";
 
-// Get available tax years (current year and previous years with potential data)
-function getAvailableTaxYears(): number[] {
-  const currentYear = new Date().getFullYear();
-  // Show current year and 2 previous years
-  return [currentYear, currentYear - 1, currentYear - 2];
-}
-
-// Determine which tax year is currently in filing period
-function getCurrentFilingYear(): number {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const month = now.getMonth() + 1; // 1-12
-
-  // Filing period is March 1 - April 30 of the following year
-  // So if we're in March or April, we're likely filing for the previous year
-  if (month >= 3 && month <= 4) {
-    return currentYear - 1;
-  }
-  // Otherwise default to current year
-  return currentYear;
-}
 
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
-
-  const [selectedYear, setSelectedYear] = useState<number>(
-    getCurrentFilingYear()
-  );
+  const { selectedYear, setSelectedYear, availableYears } = useYear();
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
@@ -79,8 +56,6 @@ export default function DashboardPage() {
       setAnnualSalary(parseFloat(stored));
     }
   }, []);
-
-  const availableYears = getAvailableTaxYears();
 
   const fetchData = useCallback(async () => {
     try {

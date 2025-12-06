@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useSidebar } from '@/context/SidebarContext';
+import { useYear, getCurrentFilingYear } from '@/context/YearContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { FloatingAddButton } from '@/components/FloatingAddButton';
@@ -29,27 +30,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Get available tax years
-function getAvailableTaxYears(): number[] {
-  const currentYear = new Date().getFullYear();
-  return [currentYear, currentYear - 1, currentYear - 2];
-}
-
-// Determine which tax year is currently in filing period
-function getCurrentFilingYear(): number {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const month = now.getMonth() + 1;
-  if (month >= 3 && month <= 4) {
-    return currentYear - 1;
-  }
-  return currentYear;
-}
 
 function TransactionsContent() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedYear, setSelectedYear, availableYears } = useYear();
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
@@ -59,10 +45,8 @@ function TransactionsContent() {
   const [editData, setEditData] = useState<Partial<Transaction>>({});
   const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
   
-  // Year filter
-  const [selectedYear, setSelectedYear] = useState<number>(getCurrentFilingYear());
+  // Year filter dropdown state
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
-  const availableYears = getAvailableTaxYears();
   
   // Filters
   const [filters, setFilters] = useState({
