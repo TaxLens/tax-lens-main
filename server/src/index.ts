@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import gmailRoutes from './routes/gmail.js';
 import transactionRoutes from './routes/transactions.js';
+import receiptRoutes from './routes/receipts.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/gmail', gmailRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/receipts', receiptRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

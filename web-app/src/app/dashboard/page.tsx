@@ -1,24 +1,33 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { useSidebar } from '@/context/SidebarContext';
-import { Sidebar } from '@/components/Sidebar';
-import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
-import { api, Transaction, TransactionSummary, SyncStatus } from '@/lib/api';
-import { formatCurrency, getTaxReliefColor, getCurrentMonthDateRange } from '@/lib/utils';
-import { 
-  RefreshCw, 
-  TrendingUp, 
-  CreditCard, 
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useSidebar } from "@/context/SidebarContext";
+import { Sidebar } from "@/components/Sidebar";
+import {
+  TransactionCard,
+  TransactionCardSkeleton,
+} from "@/components/TransactionCard";
+import { FloatingAddButton } from "@/components/FloatingAddButton";
+import { ReceiptScannerModal } from "@/components/ReceiptScannerModal";
+import { api, Transaction, TransactionSummary, SyncStatus } from "@/lib/api";
+import {
+  formatCurrency,
+  getTaxReliefColor,
+  getCurrentMonthDateRange,
+} from "@/lib/utils";
+import {
+  RefreshCw,
+  TrendingUp,
+  CreditCard,
   Receipt,
   ArrowRight,
   CheckCircle2,
   AlertCircle,
   PiggyBank,
-  FileText
-} from 'lucide-react';
+  FileText,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -26,20 +35,26 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts';
-import Link from 'next/link';
+} from "recharts";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
-  
+
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    []
+  );
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const { isCollapsed: sidebarCollapsed } = useSidebar();
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -53,7 +68,7 @@ export default function DashboardPage() {
       setRecentTransactions(transactionsRes.transactions);
       setSyncStatus(statusRes);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     } finally {
       setIsLoadingData(false);
     }
@@ -61,7 +76,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/');
+      router.push("/");
       return;
     }
     if (isAuthenticated) {
@@ -76,14 +91,16 @@ export default function DashboardPage() {
       const result = await api.syncEmails(200);
       setSyncResult({
         success: true,
-        message: `Scanned ${result.totalEmails || result.processed} emails, found ${result.transactions} transactions`,
+        message: `Scanned ${
+          result.totalEmails || result.processed
+        } emails, found ${result.transactions} transactions`,
       });
       // Refresh data after sync
       await fetchData();
     } catch (error: any) {
       setSyncResult({
         success: false,
-        message: error.message || 'Failed to sync emails',
+        message: error.message || "Failed to sync emails",
       });
     } finally {
       setIsSyncing(false);
@@ -101,28 +118,38 @@ export default function DashboardPage() {
   // Prepare tax relief chart data
   const taxReliefData = summary?.byTaxRelief
     ? Object.entries(summary.byTaxRelief)
-        .filter(([key]) => key !== 'non_deductible')
+        .filter(([key]) => key !== "non_deductible")
         .map(([key, data]) => ({
-          name: data.name.length > 20 ? data.name.substring(0, 18) + '...' : data.name,
+          name:
+            data.name.length > 20
+              ? data.name.substring(0, 18) + "..."
+              : data.name,
           fullName: data.name,
           claimed: Math.min(data.amount, data.limit),
           remaining: data.remaining,
           limit: data.limit,
           color: getTaxReliefColor(key),
         }))
-        .filter(d => d.claimed > 0)
+        .filter((d) => d.claimed > 0)
         .sort((a, b) => b.claimed - a.claimed)
         .slice(0, 8)
     : [];
 
   const { startDate } = getCurrentMonthDateRange();
-  const currentMonth = new Date().toLocaleDateString('en-MY', { month: 'long', year: 'numeric' });
+  const currentMonth = new Date().toLocaleDateString("en-MY", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="min-h-screen mesh-bg">
       <Sidebar />
-      
-      <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
+
+      <main
+        className={`p-8 transition-all duration-300 ${
+          sidebarCollapsed ? "md:ml-20" : "md:ml-64"
+        } ml-0 pt-16 md:pt-8`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -133,15 +160,17 @@ export default function DashboardPage() {
               {currentMonth} - Malaysian Tax Filing (YA 2024)
             </p>
           </div>
-          
+
           {/* Sync Button */}
           <button
             onClick={handleSync}
             disabled={isSyncing}
             className="flex items-center gap-2 px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 rounded-xl font-medium transition-all duration-200 text-white"
           >
-            <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Scanning Emails...' : 'Sync Gmail'}
+            <RefreshCw
+              className={`w-5 h-5 ${isSyncing ? "animate-spin" : ""}`}
+            />
+            {isSyncing ? "Scanning Emails..." : "Sync Gmail"}
           </button>
         </div>
 
@@ -150,8 +179,8 @@ export default function DashboardPage() {
           <div
             className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-slide-in-right ${
               syncResult.success
-                ? 'bg-accent-500/10 border border-accent-500/20 text-accent-400'
-                : 'bg-coral-500/10 border border-coral-500/20 text-coral-400'
+                ? "bg-accent-500/10 border border-accent-500/20 text-accent-400"
+                : "bg-coral-500/10 border border-coral-500/20 text-coral-400"
             }`}
           >
             {syncResult.success ? (
@@ -174,7 +203,7 @@ export default function DashboardPage() {
           <StatCard
             icon={<Receipt className="w-6 h-6" />}
             label="Transactions"
-            value={summary?.count?.toString() || '0'}
+            value={summary?.count?.toString() || "0"}
             isLoading={isLoadingData}
           />
           <StatCard
@@ -187,7 +216,13 @@ export default function DashboardPage() {
           <StatCard
             icon={<FileText className="w-6 h-6" />}
             label="Categories Claimed"
-            value={Object.keys(summary?.byTaxRelief || {}).filter(k => k !== 'non_deductible' && (summary?.byTaxRelief?.[k]?.amount || 0) > 0).length.toString()}
+            value={Object.keys(summary?.byTaxRelief || {})
+              .filter(
+                (k) =>
+                  k !== "non_deductible" &&
+                  (summary?.byTaxRelief?.[k]?.amount || 0) > 0
+              )
+              .length.toString()}
             isLoading={isLoadingData}
           />
         </div>
@@ -195,7 +230,9 @@ export default function DashboardPage() {
         {/* Tax Relief Breakdown */}
         <div className="glass-card p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Tax Relief Breakdown (YA 2024)</h2>
+            <h2 className="text-lg font-semibold">
+              Tax Relief Breakdown (YA 2024)
+            </h2>
             <Link
               href="/transactions"
               className="flex items-center gap-1 text-accent-400 hover:text-accent-300 text-sm font-medium transition-colors"
@@ -213,33 +250,45 @@ export default function DashboardPage() {
             <>
               <div className="h-72 chart-dark-bg">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={taxReliefData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                    <XAxis 
-                      type="number" 
+                  <BarChart
+                    data={taxReliefData}
+                    layout="vertical"
+                    margin={{ left: 20, right: 20 }}
+                  >
+                    <XAxis
+                      type="number"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
                       tickFormatter={(value) => `RM${value.toLocaleString()}`}
                     />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
+                    <YAxis
+                      type="category"
+                      dataKey="name"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                      tick={{ fill: "#a1a1aa", fontSize: 11 }}
                       width={150}
                     />
                     <Tooltip
-                      cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
                           const data = payload[0].payload;
                           return (
                             <div className="glass-card px-4 py-3 text-sm">
-                              <p className="font-medium mb-1">{data.fullName}</p>
-                              <p className="text-accent-400">Claimed: {formatCurrency(data.claimed)}</p>
-                              <p className="text-midnight-400">Limit: {formatCurrency(data.limit)}</p>
-                              <p className="text-amber-400">Remaining: {formatCurrency(data.remaining)}</p>
+                              <p className="font-medium mb-1">
+                                {data.fullName}
+                              </p>
+                              <p className="text-accent-400">
+                                Claimed: {formatCurrency(data.claimed)}
+                              </p>
+                              <p className="text-midnight-400">
+                                Limit: {formatCurrency(data.limit)}
+                              </p>
+                              <p className="text-amber-400">
+                                Remaining: {formatCurrency(data.remaining)}
+                              </p>
                             </div>
                           );
                         }
@@ -260,7 +309,9 @@ export default function DashboardPage() {
               {/* Tax Relief Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                 {Object.entries(summary?.byTaxRelief || {})
-                  .filter(([key, data]) => key !== 'non_deductible' && data.amount > 0)
+                  .filter(
+                    ([key, data]) => key !== "non_deductible" && data.amount > 0
+                  )
                   .sort(([, a], [, b]) => b.amount - a.amount)
                   .slice(0, 8)
                   .map(([key, data]) => (
@@ -273,7 +324,9 @@ export default function DashboardPage() {
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: getTaxReliefColor(key) }}
                         />
-                        <span className="text-xs text-midnight-400 truncate">{data.name}</span>
+                        <span className="text-xs text-midnight-400 truncate">
+                          {data.name}
+                        </span>
                       </div>
                       <div className="text-lg font-bold font-mono">
                         {formatCurrency(Math.min(data.amount, data.limit))}
@@ -285,7 +338,10 @@ export default function DashboardPage() {
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
-                            width: `${Math.min(100, (data.amount / data.limit) * 100)}%`,
+                            width: `${Math.min(
+                              100,
+                              (data.amount / data.limit) * 100
+                            )}%`,
                             backgroundColor: getTaxReliefColor(key),
                           }}
                         />
@@ -303,7 +359,9 @@ export default function DashboardPage() {
                   disabled={isSyncing}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-accent-500/10 hover:bg-accent-500/20 rounded-lg text-accent-400 transition-colors"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`}
+                  />
                   Sync your Gmail to detect transactions
                 </button>
               </div>
@@ -336,7 +394,9 @@ export default function DashboardPage() {
                 <TransactionCard
                   key={transaction.id}
                   transaction={transaction}
-                  onClick={() => router.push(`/transactions?id=${transaction.id}`)}
+                  onClick={() =>
+                    router.push(`/transactions?id=${transaction.id}`)
+                  }
                 />
               ))
             ) : (
@@ -358,11 +418,25 @@ export default function DashboardPage() {
         {syncStatus && (
           <div className="mt-6 text-center text-sm text-midnight-400">
             {syncStatus.lastSyncAt
-              ? `Last synced: ${new Date(syncStatus.lastSyncAt).toLocaleString('en-MY')}`
-              : 'Never synced'}
+              ? `Last synced: ${new Date(syncStatus.lastSyncAt).toLocaleString(
+                  "en-MY"
+                )}`
+              : "Never synced"}
           </div>
         )}
       </main>
+
+      {/* Floating Add Button */}
+      <FloatingAddButton onClick={() => setIsReceiptScannerOpen(true)} />
+
+      {/* Receipt Scanner Modal */}
+      <ReceiptScannerModal
+        isOpen={isReceiptScannerOpen}
+        onClose={() => setIsReceiptScannerOpen(false)}
+        onTransactionCreated={() => {
+          fetchData();
+        }}
+      />
     </div>
   );
 }
@@ -381,9 +455,17 @@ function StatCard({
   highlight?: boolean;
 }) {
   return (
-    <div className={`glass-card p-6 ${highlight ? 'border-accent-500/30' : ''}`}>
+    <div
+      className={`glass-card p-6 ${highlight ? "border-accent-500/30" : ""}`}
+    >
       <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${highlight ? 'bg-accent-500/20 text-accent-300' : 'bg-accent-500/10 text-accent-400'}`}>
+        <div
+          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            highlight
+              ? "bg-accent-500/20 text-accent-300"
+              : "bg-accent-500/10 text-accent-400"
+          }`}
+        >
           {icon}
         </div>
         <div>
@@ -391,7 +473,13 @@ function StatCard({
           {isLoading ? (
             <div className="h-8 w-24 rounded skeleton mt-1" />
           ) : (
-            <p className={`text-2xl font-bold font-mono ${highlight ? 'gradient-text' : ''}`}>{value}</p>
+            <p
+              className={`text-2xl font-bold font-mono ${
+                highlight ? "gradient-text" : ""
+              }`}
+            >
+              {value}
+            </p>
           )}
         </div>
       </div>
