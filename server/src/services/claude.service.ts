@@ -318,23 +318,67 @@ Only respond with the JSON object, nothing else.`;
   }
 }
 
+export interface AnalysisMetrics {
+  results: Map<string, TransactionData>;
+  confidenceStats: {
+    scores: number[];
+    average: number;
+    min: number;
+    max: number;
+    median: number;
+    highConfidence: number; // >= 0.8
+    mediumConfidence: number; // 0.6 - 0.8
+    lowConfidence: number; // < 0.6
+  };
+}
+
 export async function analyzeMultipleEmails(
   emails: EmailMessage[],
   transactionYear?: number
-): Promise<Map<string, TransactionData>> {
+): Promise<AnalysisMetrics> {
   const results = new Map<string, TransactionData>();
+  const totalEmails = emails.length;
+  const startTime = Date.now();
+  const allConfidenceScores: number[] = [];
 
   // Process emails in batches to avoid rate limiting
   const batchSize = 5;
+  const totalBatches = Math.ceil(totalEmails / batchSize);
+  
   for (let i = 0; i < emails.length; i += batchSize) {
+    const batchNum = Math.floor(i / batchSize) + 1;
+    const batchStartTime = Date.now();
     const batch = emails.slice(i, i + batchSize);
+    
     const promises = batch.map(async (email) => {
       const data = await analyzeEmailForTransaction(email, transactionYear);
-      return { emailId: email.id, data };
+      return { emailId: email.id, data, subject: email.subject };
     });
 
     const batchResults = await Promise.all(promises);
+    const batchDuration = Date.now() - batchStartTime;
+    const transactionsInBatch = batchResults.filter(r => r.data.isTransaction).length;
+    const batchConfidences = batchResults
+      .filter(r => r.data.isTransaction)
+      .map(r => r.data.confidenceScore);
+    const avgBatchConfidence = batchConfidences.length > 0 
+      ? (batchConfidences.reduce((a, b) => a + b, 0) / batchConfidences.length) 
+      : 0;
+    
+    // Log batch progress with confidence info
+    const processed = Math.min(i + batchSize, totalEmails);
+    const elapsed = (Date.now() - startTime) / 1000;
+    const rate = processed / elapsed;
+    console.log(`   📦 Batch ${batchNum}/${totalBatches}: ${batch.length} emails in ${batchDuration}ms | Found ${transactionsInBatch} txns | Avg confidence: ${(avgBatchConfidence * 100).toFixed(0)}% | Progress: ${processed}/${totalEmails} (${rate.toFixed(1)}/sec)`);
+    
+    // Log individual transaction details with confidence
     for (const result of batchResults) {
+      if (result.data.isTransaction) {
+        const conf = result.data.confidenceScore;
+        const confEmoji = conf >= 0.8 ? '🟢' : conf >= 0.6 ? '🟡' : '🔴';
+        console.log(`      ${confEmoji} ${(conf * 100).toFixed(0)}% | ${result.data.merchant || 'Unknown'} | ${result.data.currency} ${result.data.amount} | ${result.data.taxReliefCategory || 'non_deductible'}`);
+        allConfidenceScores.push(conf);
+      }
       results.set(result.emailId, result.data);
     }
 
@@ -344,7 +388,24 @@ export async function analyzeMultipleEmails(
     }
   }
 
-  return results;
+  // Calculate confidence statistics
+  const sortedScores = [...allConfidenceScores].sort((a, b) => a - b);
+  const confidenceStats = {
+    scores: allConfidenceScores,
+    average: allConfidenceScores.length > 0 
+      ? allConfidenceScores.reduce((a, b) => a + b, 0) / allConfidenceScores.length 
+      : 0,
+    min: sortedScores.length > 0 ? sortedScores[0] : 0,
+    max: sortedScores.length > 0 ? sortedScores[sortedScores.length - 1] : 0,
+    median: sortedScores.length > 0 
+      ? sortedScores[Math.floor(sortedScores.length / 2)] 
+      : 0,
+    highConfidence: allConfidenceScores.filter(s => s >= 0.8).length,
+    mediumConfidence: allConfidenceScores.filter(s => s >= 0.6 && s < 0.8).length,
+    lowConfidence: allConfidenceScores.filter(s => s < 0.6).length,
+  };
+
+  return { results, confidenceStats };
 }
 
 // Export tax categories for use in routes
