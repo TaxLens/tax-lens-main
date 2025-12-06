@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -118,9 +119,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen mesh-bg">
-      <Sidebar />
+      <Sidebar onCollapsedChange={setSidebarCollapsed} />
       
-      <main className="ml-64 p-8">
+      <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

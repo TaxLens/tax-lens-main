@@ -41,6 +41,7 @@ function TransactionsContent() {
     endDate: '',
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Pagination
   const [page, setPage] = useState(0);
@@ -164,9 +165,9 @@ function TransactionsContent() {
 
   return (
     <div className="min-h-screen mesh-bg">
-      <Sidebar />
+      <Sidebar onCollapsedChange={setSidebarCollapsed} />
       
-      <main className="ml-64 p-8">
+      <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
