@@ -1,14 +1,20 @@
 import { Router, Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { getTaxReliefCategories, MALAYSIA_TAX_RELIEF_CATEGORIES } from '../services/claude.service.js';
 
 const router = Router();
+
+// Get Malaysian tax relief categories
+router.get('/tax-categories', authenticateToken, async (req: AuthRequest, res: Response) => {
+  res.json({ categories: getTaxReliefCategories() });
+});
 
 // Get all transactions for user
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { category, startDate, endDate, limit = 50, offset = 0 } = req.query;
+    const { category, taxReliefCategory, startDate, endDate, limit = 50, offset = 0 } = req.query;
 
     let query = supabase
       .from('transactions')
@@ -19,6 +25,10 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     if (category && typeof category === 'string') {
       query = query.eq('category', category);
+    }
+
+    if (taxReliefCategory && typeof taxReliefCategory === 'string') {
+      query = query.eq('tax_relief_category', taxReliefCategory);
     }
 
     if (startDate && typeof startDate === 'string') {
@@ -77,14 +87,16 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) 
   try {
     const { id } = req.params;
     const userId = req.userId!;
-    const { merchant, amount, currency, category, transaction_date } = req.body;
+    const { merchant, amount, currency, category, tax_relief_category, transaction_date, description } = req.body;
 
     const updateData: Record<string, any> = {};
     if (merchant !== undefined) updateData.merchant = merchant;
     if (amount !== undefined) updateData.amount = amount;
     if (currency !== undefined) updateData.currency = currency;
     if (category !== undefined) updateData.category = category;
+    if (tax_relief_category !== undefined) updateData.tax_relief_category = tax_relief_category;
     if (transaction_date !== undefined) updateData.transaction_date = transaction_date;
+    if (description !== undefined) updateData.description = description;
 
     const { data: transaction, error } = await supabase
       .from('transactions')
@@ -134,7 +146,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
   }
 });
 
-// Get transaction summary/stats
+// Get transaction summary/stats including tax relief breakdown
 router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
@@ -142,7 +154,7 @@ router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Re
 
     let query = supabase
       .from('transactions')
-      .select('amount, currency, category, transaction_date')
+      .select('amount, currency, category, tax_relief_category, transaction_date')
       .eq('user_id', userId);
 
     if (startDate && typeof startDate === 'string') {
@@ -171,6 +183,24 @@ router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Re
       byCategory[cat] = (byCategory[cat] || 0) + (t.amount || 0);
     }
 
+    // Group by tax relief category with limits
+    const byTaxRelief: Record<string, { amount: number; limit: number; name: string; remaining: number }> = {};
+    for (const t of transactions || []) {
+      const taxCat = t.tax_relief_category || 'non_deductible';
+      const categoryInfo = MALAYSIA_TAX_RELIEF_CATEGORIES[taxCat as keyof typeof MALAYSIA_TAX_RELIEF_CATEGORIES];
+      
+      if (!byTaxRelief[taxCat]) {
+        byTaxRelief[taxCat] = {
+          amount: 0,
+          limit: categoryInfo?.limit || 0,
+          name: categoryInfo?.name || taxCat,
+          remaining: categoryInfo?.limit || 0,
+        };
+      }
+      byTaxRelief[taxCat].amount += t.amount || 0;
+      byTaxRelief[taxCat].remaining = Math.max(0, byTaxRelief[taxCat].limit - byTaxRelief[taxCat].amount);
+    }
+
     // Group by month
     const byMonth: Record<string, number> = {};
     for (const t of transactions || []) {
@@ -180,12 +210,23 @@ router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Re
       }
     }
 
+    // Calculate total eligible tax relief (capped at limits)
+    let totalTaxRelief = 0;
+    for (const [, data] of Object.entries(byTaxRelief)) {
+      if (data.limit > 0) {
+        totalTaxRelief += Math.min(data.amount, data.limit);
+      }
+    }
+
     res.json({
       total,
       count,
       average: count > 0 ? total / count : 0,
       byCategory,
+      byTaxRelief,
       byMonth,
+      totalTaxRelief,
+      taxCategories: MALAYSIA_TAX_RELIEF_CATEGORIES,
     });
   } catch (error) {
     console.error('Error fetching summary:', error);
@@ -194,4 +235,3 @@ router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Re
 });
 
 export default router;
-

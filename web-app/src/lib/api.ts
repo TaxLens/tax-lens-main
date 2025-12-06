@@ -78,6 +78,7 @@ class ApiClient {
   async getTransactions(params?: TransactionParams): Promise<TransactionResponse> {
     const searchParams = new URLSearchParams();
     if (params?.category) searchParams.set('category', params.category);
+    if (params?.taxReliefCategory) searchParams.set('taxReliefCategory', params.taxReliefCategory);
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
     if (params?.limit) searchParams.set('limit', params.limit.toString());
@@ -110,6 +111,10 @@ class ApiClient {
     const query = searchParams.toString();
     return this.request(`/transactions/stats/summary${query ? `?${query}` : ''}`);
   }
+
+  async getTaxCategories(): Promise<{ categories: Record<string, TaxReliefCategoryInfo> }> {
+    return this.request('/transactions/tax-categories');
+  }
 }
 
 // Types
@@ -129,9 +134,12 @@ export interface Transaction {
   amount: number | null;
   currency: string;
   category: string | null;
+  tax_relief_category: string | null;
   transaction_date: string | null;
   email_subject: string | null;
   email_snippet: string | null;
+  email_date: string | null;
+  description: string | null;
   confidence_score: number | null;
   created_at: string;
 }
@@ -140,6 +148,7 @@ export interface SyncResult {
   message: string;
   processed: number;
   transactions: number;
+  totalEmails?: number;
 }
 
 export interface SyncStatus {
@@ -149,6 +158,7 @@ export interface SyncStatus {
 
 export interface TransactionParams {
   category?: string;
+  taxReliefCategory?: string;
   startDate?: string;
   endDate?: string;
   limit?: number;
@@ -162,13 +172,28 @@ export interface TransactionResponse {
   offset: number;
 }
 
+export interface TaxReliefCategoryInfo {
+  name: string;
+  limit: number;
+  description: string;
+}
+
+export interface TaxReliefSummary {
+  amount: number;
+  limit: number;
+  name: string;
+  remaining: number;
+}
+
 export interface TransactionSummary {
   total: number;
   count: number;
   average: number;
   byCategory: Record<string, number>;
+  byTaxRelief: Record<string, TaxReliefSummary>;
   byMonth: Record<string, number>;
+  totalTaxRelief: number;
+  taxCategories: Record<string, TaxReliefCategoryInfo>;
 }
 
 export const api = new ApiClient();
-
