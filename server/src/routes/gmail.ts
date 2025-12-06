@@ -32,12 +32,13 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
       }
     }
 
-    // Fetch ALL primary emails from 1st of current month
+    // Fetch primary emails for the specified year (or current year)
     const maxResults = req.body.maxResults || 200; // Increased default
+    const year = req.body.year ? parseInt(req.body.year, 10) : undefined;
     let emails;
     
     try {
-      emails = await fetchEmails(accessToken, maxResults);
+      emails = await fetchEmails(accessToken, maxResults, year);
     } catch (gmailError: any) {
       // Token might be expired, try refreshing
       if (gmailError.code === 401 || gmailError.message?.includes('invalid_grant')) {
@@ -45,7 +46,7 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
         if (!accessToken) {
           return res.status(401).json({ error: 'Gmail token expired. Please re-authenticate.' });
         }
-        emails = await fetchEmails(accessToken, maxResults);
+        emails = await fetchEmails(accessToken, maxResults, year);
       } else {
         throw gmailError;
       }
@@ -53,9 +54,10 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
 
     if (emails.length === 0) {
       return res.json({ 
-        message: 'No emails found for this month',
+        message: `No emails found for ${year || 'current year'}`,
         processed: 0,
-        transactions: 0 
+        transactions: 0,
+        year: year || new Date().getFullYear()
       });
     }
 
@@ -128,6 +130,7 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
       processed: newEmails.length,
       transactions: transactionsToInsert.length,
       totalEmails: emails.length,
+      year: year || new Date().getFullYear(),
     });
   } catch (error) {
     console.error('Sync error:', error);

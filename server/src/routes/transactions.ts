@@ -14,7 +14,7 @@ router.get('/tax-categories', authenticateToken, async (req: AuthRequest, res: R
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { category, taxReliefCategory, startDate, endDate, limit = 50, offset = 0 } = req.query;
+    const { category, taxReliefCategory, startDate, endDate, year, limit = 50, offset = 0 } = req.query;
 
     let query = supabase
       .from('transactions')
@@ -31,12 +31,20 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       query = query.eq('tax_relief_category', taxReliefCategory);
     }
 
-    if (startDate && typeof startDate === 'string') {
-      query = query.gte('transaction_date', startDate);
-    }
+    // If year is specified, filter by that tax year (Jan 1 - Dec 31)
+    if (year && typeof year === 'string') {
+      const yearNum = parseInt(year, 10);
+      query = query.gte('transaction_date', `${yearNum}-01-01`)
+                   .lte('transaction_date', `${yearNum}-12-31`);
+    } else {
+      // Otherwise use startDate/endDate if provided
+      if (startDate && typeof startDate === 'string') {
+        query = query.gte('transaction_date', startDate);
+      }
 
-    if (endDate && typeof endDate === 'string') {
-      query = query.lte('transaction_date', endDate);
+      if (endDate && typeof endDate === 'string') {
+        query = query.lte('transaction_date', endDate);
+      }
     }
 
     const { data: transactions, error, count } = await query;
@@ -150,19 +158,27 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, year } = req.query;
 
     let query = supabase
       .from('transactions')
       .select('amount, currency, category, tax_relief_category, transaction_date')
       .eq('user_id', userId);
 
-    if (startDate && typeof startDate === 'string') {
-      query = query.gte('transaction_date', startDate);
-    }
+    // If year is specified, filter by that tax year (Jan 1 - Dec 31)
+    if (year && typeof year === 'string') {
+      const yearNum = parseInt(year, 10);
+      query = query.gte('transaction_date', `${yearNum}-01-01`)
+                   .lte('transaction_date', `${yearNum}-12-31`);
+    } else {
+      // Otherwise use startDate/endDate if provided
+      if (startDate && typeof startDate === 'string') {
+        query = query.gte('transaction_date', startDate);
+      }
 
-    if (endDate && typeof endDate === 'string') {
-      query = query.lte('transaction_date', endDate);
+      if (endDate && typeof endDate === 'string') {
+        query = query.lte('transaction_date', endDate);
+      }
     }
 
     const { data: transactions, error } = await query;
@@ -218,6 +234,10 @@ router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Re
       }
     }
 
+    // Calculate the selected year and filing deadline
+    const selectedYear = year ? parseInt(year as string, 10) : new Date().getFullYear();
+    const filingDeadline = `30 April ${selectedYear + 1}`;
+
     res.json({
       total,
       count,
@@ -227,6 +247,8 @@ router.get('/stats/summary', authenticateToken, async (req: AuthRequest, res: Re
       byMonth,
       totalTaxRelief,
       taxCategories: MALAYSIA_TAX_RELIEF_CATEGORIES,
+      year: selectedYear,
+      filingDeadline,
     });
   } catch (error) {
     console.error('Error fetching summary:', error);

@@ -63,10 +63,10 @@ class ApiClient {
   }
 
   // Gmail endpoints
-  async syncEmails(maxResults?: number): Promise<SyncResult> {
+  async syncEmails(maxResults?: number, year?: number): Promise<SyncResult> {
     return this.request('/gmail/sync', {
       method: 'POST',
-      body: JSON.stringify({ maxResults }),
+      body: JSON.stringify({ maxResults, year }),
     });
   }
 
@@ -81,6 +81,7 @@ class ApiClient {
     if (params?.taxReliefCategory) searchParams.set('taxReliefCategory', params.taxReliefCategory);
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
+    if (params?.year) searchParams.set('year', params.year.toString());
     if (params?.limit) searchParams.set('limit', params.limit.toString());
     if (params?.offset) searchParams.set('offset', params.offset.toString());
 
@@ -103,10 +104,11 @@ class ApiClient {
     await this.request(`/transactions/${id}`, { method: 'DELETE' });
   }
 
-  async getTransactionSummary(params?: { startDate?: string; endDate?: string }): Promise<TransactionSummary> {
+  async getTransactionSummary(params?: { startDate?: string; endDate?: string; year?: number }): Promise<TransactionSummary> {
     const searchParams = new URLSearchParams();
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
+    if (params?.year) searchParams.set('year', params.year.toString());
 
     const query = searchParams.toString();
     return this.request(`/transactions/stats/summary${query ? `?${query}` : ''}`);
@@ -149,6 +151,7 @@ export interface SyncResult {
   processed: number;
   transactions: number;
   totalEmails?: number;
+  year?: number;
 }
 
 export interface SyncStatus {
@@ -161,6 +164,7 @@ export interface TransactionParams {
   taxReliefCategory?: string;
   startDate?: string;
   endDate?: string;
+  year?: number;
   limit?: number;
   offset?: number;
 }
@@ -194,6 +198,8 @@ export interface TransactionSummary {
   byMonth: Record<string, number>;
   totalTaxRelief: number;
   taxCategories: Record<string, TaxReliefCategoryInfo>;
+  year: number;
+  filingDeadline: string;
 }
 
 export const api = new ApiClient();

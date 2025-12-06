@@ -7,17 +7,18 @@ import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { api, Transaction, TransactionSummary, SyncStatus } from '@/lib/api';
-import { formatCurrency, getTaxReliefColor, getCurrentMonthDateRange } from '@/lib/utils';
+import { formatCurrency, getTaxReliefColor } from '@/lib/utils';
 import { 
   RefreshCw, 
-  TrendingUp, 
   CreditCard, 
   Receipt,
   ArrowRight,
   CheckCircle2,
   AlertCircle,
   PiggyBank,
-  FileText
+  FileText,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
 import {
   BarChart,
@@ -29,24 +30,50 @@ import {
 } from 'recharts';
 import Link from 'next/link';
 
+// Get available tax years (current year and previous years with potential data)
+function getAvailableTaxYears(): number[] {
+  const currentYear = new Date().getFullYear();
+  // Show current year and 2 previous years
+  return [currentYear, currentYear - 1, currentYear - 2];
+}
+
+// Determine which tax year is currently in filing period
+function getCurrentFilingYear(): number {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const month = now.getMonth() + 1; // 1-12
+  
+  // Filing period is March 1 - April 30 of the following year
+  // So if we're in March or April, we're likely filing for the previous year
+  if (month >= 3 && month <= 4) {
+    return currentYear - 1;
+  }
+  // Otherwise default to current year
+  return currentYear;
+}
+
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
   
+  const [selectedYear, setSelectedYear] = useState<number>(getCurrentFilingYear());
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
   const { isCollapsed: sidebarCollapsed } = useSidebar();
+
+  const availableYears = getAvailableTaxYears();
 
   const fetchData = useCallback(async () => {
     try {
       setIsLoadingData(true);
       const [summaryRes, transactionsRes, statusRes] = await Promise.all([
-        api.getTransactionSummary(),
-        api.getTransactions({ limit: 5 }),
+        api.getTransactionSummary({ year: selectedYear }),
+        api.getTransactions({ year: selectedYear, limit: 5 }),
         api.getSyncStatus(),
       ]);
       setSummary(summaryRes);
@@ -57,7 +84,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, []);
+  }, [selectedYear]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -73,7 +100,7 @@ export default function DashboardPage() {
     setIsSyncing(true);
     setSyncResult(null);
     try {
-      const result = await api.syncEmails(200);
+      const result = await api.syncEmails(200, selectedYear);
       setSyncResult({
         success: true,
         message: `Scanned ${result.totalEmails || result.processed} emails, found ${result.transactions} transactions`,
@@ -88,6 +115,11 @@ export default function DashboardPage() {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+    setYearDropdownOpen(false);
   };
 
   if (authLoading) {
@@ -115,8 +147,9 @@ export default function DashboardPage() {
         .slice(0, 8)
     : [];
 
-  const { startDate } = getCurrentMonthDateRange();
-  const currentMonth = new Date().toLocaleDateString('en-MY', { month: 'long', year: 'numeric' });
+  // Check if we're in filing period (March-April)
+  const now = new Date();
+  const isFilingPeriod = now.getMonth() >= 2 && now.getMonth() <= 3; // March = 2, April = 3
 
   return (
     <div className="min-h-screen mesh-bg">
@@ -124,13 +157,50 @@ export default function DashboardPage() {
       
       <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold mb-2">
-              Tax Relief Dashboard
-            </h1>
+            <div className="flex items-center gap-4 mb-2">
+              <h1 className="text-3xl font-display font-bold">
+                Tax Year {selectedYear}
+              </h1>
+              
+              {/* Year Selector Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
+                  className="flex items-center gap-2 px-4 py-2 bg-midnight-800 hover:bg-midnight-700 border border-midnight-600 rounded-lg transition-colors"
+                >
+                  <Calendar className="w-4 h-4 text-accent-400" />
+                  <span className="font-medium">{selectedYear}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {yearDropdownOpen && (
+                  <div className="absolute top-full mt-2 w-full bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 overflow-hidden">
+                    {availableYears.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => handleYearChange(year)}
+                        className={`w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors ${
+                          year === selectedYear ? 'bg-accent-500/20 text-accent-400' : ''
+                        }`}
+                      >
+                        {year}
+                        {year === getCurrentFilingYear() && (
+                          <span className="ml-2 text-xs text-accent-400">(filing now)</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
             <p className="text-midnight-400">
-              {currentMonth} - Malaysian Tax Filing (YA 2024)
+              Malaysian Tax Filing • File by{' '}
+              <span className={isFilingPeriod && selectedYear === getCurrentFilingYear() ? 'text-amber-400 font-medium' : ''}>
+                30 April {selectedYear + 1}
+              </span>
             </p>
           </div>
           
@@ -141,9 +211,22 @@ export default function DashboardPage() {
             className="flex items-center gap-2 px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 rounded-xl font-medium transition-all duration-200 text-white"
           >
             <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Scanning Emails...' : 'Sync Gmail'}
+            {isSyncing ? 'Scanning Emails...' : `Sync ${selectedYear} Emails`}
           </button>
         </div>
+
+        {/* Filing Period Alert */}
+        {isFilingPeriod && selectedYear === getCurrentFilingYear() && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <span className="text-amber-400 font-medium">Filing Period Active</span>
+              <span className="text-midnight-300 ml-2">
+                Submit your tax return for YA {selectedYear} by 30 April {selectedYear + 1}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Sync Result Message */}
         {syncResult && (
@@ -162,6 +245,63 @@ export default function DashboardPage() {
             <span>{syncResult.message}</span>
           </div>
         )}
+
+        {/* Tax Filing Summary Card */}
+        <div className="glass-card p-6 mb-8 border-l-4 border-l-accent-500">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-accent-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Tax Year {selectedYear} Summary</h2>
+                  <p className="text-sm text-midnight-400">
+                    Assessment Year {selectedYear} • Filing deadline: 30 April {selectedYear + 1}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div>
+                  <p className="text-sm text-midnight-400">Total Spending</p>
+                  <p className="text-xl font-bold font-mono">{formatCurrency(summary?.total || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-midnight-400">Transactions</p>
+                  <p className="text-xl font-bold font-mono">{summary?.count || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-midnight-400">Tax Relief Eligible</p>
+                  <p className="text-xl font-bold font-mono gradient-text">{formatCurrency(summary?.totalTaxRelief || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-midnight-400">Categories Used</p>
+                  <p className="text-xl font-bold font-mono">
+                    {Object.keys(summary?.byTaxRelief || {}).filter(k => k !== 'non_deductible' && (summary?.byTaxRelief?.[k]?.amount || 0) > 0).length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="lg:border-l lg:border-midnight-700 lg:pl-6">
+              <div className="flex flex-col gap-2">
+                <a
+                  href="https://mytax.hasil.gov.my/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 rounded-lg text-white font-medium transition-colors"
+                >
+                  File on MyTax
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+                <p className="text-xs text-midnight-500 text-center">
+                  LHDN e-Filing Portal
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -195,7 +335,7 @@ export default function DashboardPage() {
         {/* Tax Relief Breakdown */}
         <div className="glass-card p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Tax Relief Breakdown (YA 2024)</h2>
+            <h2 className="text-lg font-semibold">Tax Relief Breakdown (YA {selectedYear})</h2>
             <Link
               href="/transactions"
               className="flex items-center gap-1 text-accent-400 hover:text-accent-300 text-sm font-medium transition-colors"

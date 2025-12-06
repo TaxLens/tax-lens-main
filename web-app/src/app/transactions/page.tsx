@@ -19,8 +19,26 @@ import {
   Trash2,
   Edit2,
   Save,
-  Shield
+  Shield,
+  ChevronDown
 } from 'lucide-react';
+
+// Get available tax years
+function getAvailableTaxYears(): number[] {
+  const currentYear = new Date().getFullYear();
+  return [currentYear, currentYear - 1, currentYear - 2];
+}
+
+// Determine which tax year is currently in filing period
+function getCurrentFilingYear(): number {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const month = now.getMonth() + 1;
+  if (month >= 3 && month <= 4) {
+    return currentYear - 1;
+  }
+  return currentYear;
+}
 
 function TransactionsContent() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -33,6 +51,11 @@ function TransactionsContent() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Transaction>>({});
+  
+  // Year filter
+  const [selectedYear, setSelectedYear] = useState<number>(getCurrentFilingYear());
+  const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
+  const availableYears = getAvailableTaxYears();
   
   // Filters
   const [filters, setFilters] = useState({
@@ -56,6 +79,7 @@ function TransactionsContent() {
         taxReliefCategory: filters.taxReliefCategory || undefined,
         startDate: filters.startDate || undefined,
         endDate: filters.endDate || undefined,
+        year: selectedYear,
         limit,
         offset: page * limit,
       });
@@ -66,7 +90,7 @@ function TransactionsContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, page]);
+  }, [filters, page, selectedYear]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -96,6 +120,12 @@ function TransactionsContent() {
 
   const clearFilters = () => {
     setFilters({ category: '', taxReliefCategory: '', startDate: '', endDate: '' });
+    setPage(0);
+  };
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+    setYearDropdownOpen(false);
     setPage(0);
   };
 
@@ -170,11 +200,44 @@ function TransactionsContent() {
       
       <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold mb-2">Transactions</h1>
+            <div className="flex items-center gap-4 mb-2">
+              <h1 className="text-3xl font-display font-bold">Transactions</h1>
+              
+              {/* Year Selector Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
+                  className="flex items-center gap-2 px-4 py-2 bg-midnight-800 hover:bg-midnight-700 border border-midnight-600 rounded-lg transition-colors"
+                >
+                  <Calendar className="w-4 h-4 text-accent-400" />
+                  <span className="font-medium">{selectedYear}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {yearDropdownOpen && (
+                  <div className="absolute top-full mt-2 w-full bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 overflow-hidden">
+                    {availableYears.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => handleYearChange(year)}
+                        className={`w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors ${
+                          year === selectedYear ? 'bg-accent-500/20 text-accent-400' : ''
+                        }`}
+                      >
+                        {year}
+                        {year === getCurrentFilingYear() && (
+                          <span className="ml-2 text-xs text-accent-400">(filing now)</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <p className="text-midnight-400">
-              {total} transaction{total !== 1 ? 's' : ''} found
+              {total} transaction{total !== 1 ? 's' : ''} found for Tax Year {selectedYear}
             </p>
           </div>
           
