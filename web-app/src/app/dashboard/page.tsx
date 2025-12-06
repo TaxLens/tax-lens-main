@@ -334,6 +334,7 @@ export default function DashboardPage() {
           annualSalary={annualSalary}
           totalTaxRelief={summary?.totalTaxRelief || 0}
           isLoading={isLoadingData}
+          selectedYear={selectedYear}
         />
 
         {/* Tax Relief Breakdown */}
@@ -552,10 +553,12 @@ function TaxSummaryCard({
   annualSalary,
   totalTaxRelief,
   isLoading,
+  selectedYear,
 }: {
   annualSalary: number;
   totalTaxRelief: number;
   isLoading: boolean;
+  selectedYear: number;
 }) {
   // Calculate tax with reliefs applied
   const taxCalculation = calculateTax(annualSalary, totalTaxRelief);
@@ -585,7 +588,7 @@ function TaxSummaryCard({
 
   return (
     <div className="glass-card p-6 mb-8">
-      <h2 className="text-lg font-semibold mb-4">Tax Estimation (YA 2024)</h2>
+      <h2 className="text-lg font-semibold mb-4">Tax Estimation (YA {selectedYear})</h2>
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
