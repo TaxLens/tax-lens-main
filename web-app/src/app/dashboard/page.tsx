@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { api, Transaction, TransactionSummary, SyncStatus } from '@/lib/api';
-import { formatCurrency, getTaxReliefColor, TAX_RELIEF_CATEGORIES, getCurrentMonthDateRange } from '@/lib/utils';
+import { formatCurrency, getTaxReliefColor, getCurrentMonthDateRange } from '@/lib/utils';
 import { 
   RefreshCw, 
   TrendingUp, 
@@ -38,7 +39,7 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { isCollapsed: sidebarCollapsed } = useSidebar();
 
   const fetchData = useCallback(async () => {
     try {
@@ -119,7 +120,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen mesh-bg">
-      <Sidebar onCollapsedChange={setSidebarCollapsed} />
+      <Sidebar />
       
       <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}

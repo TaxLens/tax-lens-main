@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { cn } from '@/lib/utils';
 import { 
   LayoutDashboard, 
@@ -24,44 +24,16 @@ const navItems = [
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
-interface SidebarProps {
-  onCollapsedChange?: (collapsed: boolean) => void;
-}
-
-export function Sidebar({ onCollapsedChange }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  // Check if we're on mobile
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
-        setIsCollapsed(true);
-      }
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Notify parent of collapse state changes
-  useEffect(() => {
-    onCollapsedChange?.(isCollapsed);
-  }, [isCollapsed, onCollapsedChange]);
-
-  const toggleSidebar = () => {
-    if (isMobile) {
-      setIsMobileOpen(!isMobileOpen);
-    } else {
-      setIsCollapsed(!isCollapsed);
-    }
-  };
+  const { 
+    isCollapsed, 
+    isMobile, 
+    isMobileOpen, 
+    setIsMobileOpen, 
+    toggleSidebar 
+  } = useSidebar();
 
   // Close mobile sidebar when clicking outside
   const handleOverlayClick = () => {

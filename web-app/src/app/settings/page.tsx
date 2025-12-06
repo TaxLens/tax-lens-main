@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { api, SyncStatus } from '@/lib/api';
 import { 
@@ -20,7 +21,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { isCollapsed: sidebarCollapsed } = useSidebar();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -53,9 +54,9 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen mesh-bg">
-      <Sidebar onCollapsedChange={setSidebarCollapsed} />
+      <Sidebar />
       
-      <main className={`p-8 max-w-4xl transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
+      <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold mb-2">Settings</h1>
