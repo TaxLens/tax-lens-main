@@ -6,6 +6,8 @@ import gmailRoutes from './routes/gmail.js';
 import transactionRoutes from './routes/transactions.js';
 import receiptRoutes from './routes/receipts.js';
 import filesRoutes from './routes/files.js';
+import taxDocumentsRoutes from './routes/tax-documents.js';
+import taxgptRoutes from './routes/taxgpt.js';
 
 dotenv.config();
 
@@ -25,6 +27,8 @@ app.use('/api/gmail', gmailRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/files', filesRoutes);
+app.use('/api/tax-documents', taxDocumentsRoutes);
+app.use('/api/taxgpt', taxgptRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

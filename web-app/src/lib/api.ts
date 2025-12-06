@@ -176,6 +176,67 @@ class ApiClient {
     const token = this.getToken();
     return `${API_BASE_URL}/files/download/${year}?token=${token}`;
   }
+
+  // Tax Documents (RAG) endpoints
+  async getTaxDocumentsStatus(): Promise<{ pineconeConfigured: boolean; openaiConfigured: boolean }> {
+    return this.request("/tax-documents/status");
+  }
+
+  async listTaxDocuments(): Promise<{ documents: TaxDocument[] }> {
+    return this.request("/tax-documents");
+  }
+
+  async uploadTaxDocument(
+    file: File,
+    year: number,
+    description?: string
+  ): Promise<{ success: boolean; documentId: string; chunkCount: number; message: string }> {
+    const token = this.getToken();
+    const formData = new FormData();
+    formData.append("document", file);
+    formData.append("year", year.toString());
+    if (description) {
+      formData.append("description", description);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/tax-documents/upload`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Request failed" }));
+      throw new Error(error.error || "Failed to upload document");
+    }
+
+    return response.json();
+  }
+
+  async deleteTaxDocument(documentId: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/tax-documents/${documentId}`, { method: "DELETE" });
+  }
+
+  async queryTaxRules(query: string, year?: number): Promise<{ query: string; year: string; context: string; hasResults: boolean }> {
+    return this.request("/tax-documents/query", {
+      method: "POST",
+      body: JSON.stringify({ query, year }),
+    });
+  }
+
+  // TaxGPT chat endpoint
+  async chatWithTaxGPT(
+    message: string,
+    history?: ChatMessage[],
+    year?: number
+  ): Promise<{ response: string; hasContext: boolean }> {
+    return this.request("/taxgpt/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, history, year }),
+    });
+  }
 }
 
 // Types
@@ -316,6 +377,20 @@ export interface YearReceipts {
 export interface FilesResponse {
   years: YearReceipts[];
   totalCount: number;
+}
+
+export interface TaxDocument {
+  id: string;
+  filename: string;
+  year: number;
+  description: string | null;
+  chunk_count: number;
+  uploaded_at: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export const api = new ApiClient();

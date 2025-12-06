@@ -18,6 +18,8 @@ import {
   ChevronRight,
   FolderOpen,
   Wallet,
+  FileText,
+  Sparkles,
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +27,8 @@ const navItems = [
   { href: "/relief", icon: Wallet, label: "Tax Relief" },
   { href: "/transactions", icon: Receipt, label: "Transactions" },
   { href: "/files", icon: FolderOpen, label: "Files" },
+  { href: "/taxgpt", icon: Sparkles, label: "TaxGPT" },
+  { href: "/admin/tax-rules", icon: FileText, label: "Tax Rules" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 

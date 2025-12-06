@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { EmailMessage } from "./gmail.service.js";
+import { queryTaxRules } from "./document.service.js";
+import { isPineconeConfigured } from "../lib/pinecone.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -137,7 +139,8 @@ export interface TransactionData {
 }
 
 export async function analyzeEmailForTransaction(
-  email: EmailMessage
+  email: EmailMessage,
+  transactionYear?: number
 ): Promise<TransactionData> {
   console.log("\n" + "=".repeat(80));
   console.log("📧 ANALYZING EMAIL");
@@ -148,6 +151,33 @@ export async function analyzeEmailForTransaction(
   console.log(`Snippet: ${email.snippet.substring(0, 200)}...`);
   console.log("-".repeat(80));
 
+  // Determine the year for tax rules (from email date or provided year)
+  const emailYear = email.date
+    ? new Date(email.date).getFullYear()
+    : new Date().getFullYear();
+  const taxYear = transactionYear || emailYear;
+
+  // Build tax context - try RAG first, fallback to static rules
+  let taxRulesContext = "";
+  let usingRAG = false;
+
+  if (isPineconeConfigured() && process.env.OPENAI_API_KEY) {
+    try {
+      // Query relevant tax rules from Pinecone
+      const ragQuery = `Malaysian tax relief categories, deductions, and limits for ${taxYear}. Eligible expenses for tax filing.`;
+      const ragContext = await queryTaxRules(ragQuery, taxYear, 8);
+      
+      if (ragContext && ragContext.length > 0) {
+        taxRulesContext = `\n\nRELEVANT MALAYSIAN TAX RULES (from official documents for ${taxYear}):\n${ragContext}`;
+        usingRAG = true;
+        console.log(`📚 Using RAG context for tax year ${taxYear}`);
+      }
+    } catch (error) {
+      console.warn("RAG query failed, using static rules:", error);
+    }
+  }
+
+  // Static tax categories as fallback or supplement
   const taxCategoriesDescription = Object.entries(
     MALAYSIA_TAX_RELIEF_CATEGORIES
   )
@@ -158,6 +188,10 @@ export async function analyzeEmailForTransaction(
         }`
     )
     .join("\n");
+
+  const staticRulesSection = usingRAG
+    ? `\n\nSTANDARD TAX RELIEF CATEGORIES (use as reference):\n${taxCategoriesDescription}`
+    : `\n\nMalaysian Tax Relief Categories for Year of Assessment ${taxYear}:\n${taxCategoriesDescription}`;
 
   const prompt = `You are a Malaysian tax expert assistant. Analyze the following email and determine if it represents a legitimate spending transaction that could be used for Malaysian tax relief filing.
 
@@ -190,9 +224,13 @@ DO NOT identify these as transactions:
 - Money RECEIVED (only track money SPENT)
 
 For BANK TRANSFERS: Use the RECIPIENT'S NAME as the merchant (e.g., if sending to "John Doe", merchant should be "John Doe")
+${taxRulesContext}
+${staticRulesSection}
 
-Malaysian Tax Relief Categories for Year of Assessment 2024:
-${taxCategoriesDescription}
+Based on the tax rules above, carefully categorize this transaction to the most appropriate tax relief category. Pay attention to:
+- Specific limits for each category
+- Eligibility conditions
+- Any special requirements mentioned in the rules
 
 Please analyze this email and respond with a JSON object (no markdown, just the JSON):
 {
@@ -281,7 +319,8 @@ Only respond with the JSON object, nothing else.`;
 }
 
 export async function analyzeMultipleEmails(
-  emails: EmailMessage[]
+  emails: EmailMessage[],
+  transactionYear?: number
 ): Promise<Map<string, TransactionData>> {
   const results = new Map<string, TransactionData>();
 
@@ -290,7 +329,7 @@ export async function analyzeMultipleEmails(
   for (let i = 0; i < emails.length; i += batchSize) {
     const batch = emails.slice(i, i + batchSize);
     const promises = batch.map(async (email) => {
-      const data = await analyzeEmailForTransaction(email);
+      const data = await analyzeEmailForTransaction(email, transactionYear);
       return { emailId: email.id, data };
     });
 
