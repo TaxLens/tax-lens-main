@@ -1,4 +1,4 @@
-# TaxLens - AI-Powered Spending Tracker
+# TaxLens - AI-Driven Tax Automation Platform 
 
 **⚠️ IMPORTANT: PLEASE READ THE [TESTING GUIDE](TESTING.md) FIRST ⚠️**
 
