@@ -1,6 +1,6 @@
 "use client";
 
-import { calculateTax, formatCurrency, PERSONAL_RELIEF, formatTaxBracket } from "@/lib/utils";
+import { calculateTax, formatCurrency, PERSONAL_RELIEF, formatTaxBracket, TAX_RELIEF_CATEGORIES, calculateEPF, EPF_RELIEF_LIMIT } from "@/lib/utils";
 import {
   TrendingDown,
   TrendingUp,
@@ -9,15 +9,26 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+interface ReliefData {
+  [key: string]: {
+    name: string;
+    amount: number;
+    limit: number;
+    remaining: number;
+  };
+}
+
 interface TaxHealthCardProps {
   annualSalary: number;
   totalTaxRelief: number;
+  reliefData?: ReliefData;
   isLoading: boolean;
 }
 
 export function TaxHealthCard({
   annualSalary,
   totalTaxRelief,
+  reliefData = {},
   isLoading,
 }: TaxHealthCardProps) {
   if (isLoading) {
@@ -39,10 +50,21 @@ export function TaxHealthCard({
   const taxCalculation = calculateTax(annualSalary, totalTaxRelief);
   const taxWithoutRelief = calculateTax(annualSalary, 0);
   const taxSavings = taxWithoutRelief.taxPayable - taxCalculation.taxPayable;
-
-  // Calculate relief utilization percentage (approximation based on common reliefs)
-  // This is illustrative as total limit varies by profile, but we can show progress relative to income or a baseline
   const effectiveRate = taxCalculation.effectiveRate;
+
+  // Calculate EPF details
+  const epfDetails = calculateEPF(annualSalary);
+
+  // Calculate overall relief utilization (same as Relief page)
+  const deductibleCategories = TAX_RELIEF_CATEGORIES.filter(
+    cat => cat.value !== 'non_deductible' && cat.value !== 'individual'
+  );
+  const totalLimit = deductibleCategories.reduce((sum, cat) => sum + cat.limit, 0) + EPF_RELIEF_LIMIT;
+  const totalClaimed = deductibleCategories.reduce((sum, cat) => {
+    const claimed = reliefData[cat.value]?.amount || 0;
+    return sum + Math.min(claimed, cat.limit);
+  }, 0) + epfDetails.epfTaxRelief;
+  const utilizationPercentage = totalLimit > 0 ? (totalClaimed / totalLimit) * 100 : 0;
 
   return (
     <div className="glass-card p-6 relative group">
@@ -260,22 +282,24 @@ export function TaxHealthCard({
         <div className="mt-6 pt-6 border-t border-midnight-800">
           <div className="flex items-center justify-between text-xs mb-2">
             <span className="text-midnight-400">Tax Relief Utilization</span>
-            <span className="text-accent-400 font-medium">
-              {totalTaxRelief > 0 ? "Active" : "No reliefs found"}
+            <span className="text-accent-400 font-medium font-mono">
+              {utilizationPercentage.toFixed(1)}%
             </span>
           </div>
           <div className="h-2 bg-midnight-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-accent-500 to-purple-500 relative"
-              style={{ width: "100%" }} // Showing full bar as "active" gradient, maybe animate or scale based on something meaningful
+              className="h-full bg-gradient-to-r from-accent-500 to-purple-500 relative transition-all duration-500"
+              style={{ width: `${Math.min(100, utilizationPercentage)}%` }}
             >
-              <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
+              {utilizationPercentage > 0 && (
+                <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
+              )}
             </div>
           </div>
           <div className="mt-2 text-xs text-midnight-500 flex items-center gap-1">
             <DollarSign className="w-3 h-3" />
             <span>
-              Based on annual income of {formatCurrency(annualSalary)}
+              {formatCurrency(totalClaimed)} of {formatCurrency(totalLimit)} claimed
             </span>
           </div>
         </div>

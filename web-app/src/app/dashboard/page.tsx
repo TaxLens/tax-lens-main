@@ -177,6 +177,7 @@ export default function DashboardPage() {
             <TaxHealthCard
               annualSalary={annualSalary}
               totalTaxRelief={summary?.totalTaxRelief || 0}
+              reliefData={summary?.byTaxRelief || {}}
               isLoading={isLoadingData}
             />
           </div>
