@@ -24,7 +24,7 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-midnight-900/80 backdrop-blur-xl border-r border-midnight-800 flex flex-col z-50">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-midnight-900 border-r border-midnight-800 flex flex-col z-50">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-6 border-b border-midnight-800">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center">
@@ -46,7 +46,7 @@ export function Sidebar() {
                     'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                     isActive
                       ? 'bg-accent-500/10 text-accent-400 border border-accent-500/20'
-                      : 'text-midnight-300 hover:bg-midnight-800/50 hover:text-white'
+                      : 'text-midnight-400 hover:bg-midnight-800 hover:text-midnight-50'
                   )}
                 >
                   <item.icon className="w-5 h-5" />
@@ -60,18 +60,18 @@ export function Sidebar() {
 
       {/* User section */}
       <div className="px-4 py-4 border-t border-midnight-800">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-midnight-800/50 mb-3">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-midnight-800 mb-3">
           <div className="w-9 h-9 rounded-full bg-accent-500/20 flex items-center justify-center">
             <User className="w-4 h-4 text-accent-400" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
-            <p className="text-xs text-midnight-400 truncate">{user?.email}</p>
+            <p className="text-xs text-midnight-500 truncate">{user?.email}</p>
           </div>
         </div>
         <button
           onClick={logout}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-midnight-300 hover:bg-coral-500/10 hover:text-coral-400 transition-all duration-200"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-midnight-400 hover:bg-coral-500/10 hover:text-coral-400 transition-all duration-200"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Sign Out</span>
