@@ -75,13 +75,14 @@ export async function refreshAccessToken(userId: string): Promise<string | null>
 }
 
 /**
- * Get the first day of the current month in YYYY/MM/DD format for Gmail query
+ * Get the start date for email sync in YYYY/MM/DD format for Gmail query
+ * Currently set to November 1st of current year
  */
-function getFirstDayOfCurrentMonth(): string {
+function getSyncStartDate(): string {
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth() + 1; // getMonth() is 0-indexed
-  return `${year}/${month}/1`;
+  // Start from November 1st
+  return `${year}/11/1`;
 }
 
 /**
@@ -94,12 +95,12 @@ export async function fetchEmails(
   oauth2Client.setCredentials({ access_token: accessToken });
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  // Get the first day of current month
-  const firstDayOfMonth = getFirstDayOfCurrentMonth();
+  // Get the sync start date (November 1st)
+  const syncStartDate = getSyncStartDate();
   
-  // Query: Primary inbox emails from 1st of current month
+  // Query: Primary inbox emails from sync start date
   // category:primary ensures we only get main inbox emails (not promotions, social, updates)
-  const query = `category:primary after:${firstDayOfMonth}`;
+  const query = `category:primary after:${syncStartDate}`;
   
   console.log(`Fetching emails with query: ${query}`);
 
@@ -176,6 +177,6 @@ export async function fetchEmails(
     }
   } while (pageToken && emails.length < maxResults);
 
-  console.log(`Fetched ${emails.length} emails from primary inbox since ${firstDayOfMonth}`);
+  console.log(`Fetched ${emails.length} emails from primary inbox since ${syncStartDate}`);
   return emails;
 }
