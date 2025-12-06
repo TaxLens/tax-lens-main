@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { Mail, TrendingUp, Shield, Sparkles } from 'lucide-react';
+import { useEffect } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { Mail, TrendingUp, Shield } from "lucide-react";
 
 export default function HomePage() {
   const { isAuthenticated, isLoading, login } = useAuth();
@@ -11,7 +12,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -28,17 +29,22 @@ export default function HomePage() {
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-accent-500/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-coral-500/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
+        <div
+          className="absolute bottom-20 right-10 w-96 h-96 bg-coral-500/10 rounded-full blur-3xl animate-pulse-slow"
+          style={{ animationDelay: "1s" }}
+        />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-midnight-800/50 rounded-full blur-3xl" />
       </div>
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-midnight-950" />
+          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
+            <Image src="/logo.png" alt="TaxLens" width={40} height={40} />
           </div>
-          <span className="font-display text-2xl font-bold gradient-text">TaxLens</span>
+          <span className="font-display text-2xl font-bold gradient-text">
+            TaxLens
+          </span>
         </div>
       </header>
 
@@ -47,23 +53,32 @@ export default function HomePage() {
         <div className="text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-midnight-800/60 border border-midnight-700 mb-8 animate-fade-in">
             <span className="w-2 h-2 rounded-full bg-accent-400 animate-pulse" />
-            <span className="text-sm text-midnight-300">AI-Powered Transaction Detection</span>
+            <span className="text-sm text-midnight-300">
+              AI-Powered Transaction Detection
+            </span>
           </div>
 
-          <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            Track Every Ringgit{' '}
+          <h1
+            className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight animate-slide-up"
+            style={{ animationDelay: "0.1s" }}
+          >
+            Track Every Ringgit{" "}
             <span className="gradient-text">Automatically</span>
           </h1>
 
-          <p className="text-xl text-midnight-300 mb-12 leading-relaxed animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            Connect your Gmail and let AI detect spending transactions from receipts, 
-            invoices, and payment confirmations. No manual entry required.
+          <p
+            className="text-xl text-midnight-300 mb-12 leading-relaxed animate-slide-up"
+            style={{ animationDelay: "0.2s" }}
+          >
+            Connect your Gmail and let AI detect spending transactions from
+            receipts, invoices, and payment confirmations. No manual entry
+            required.
           </p>
 
           <button
             onClick={login}
             className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-accent-500 to-accent-600 rounded-2xl font-semibold text-lg text-white transition-all duration-300 hover:shadow-lg hover:shadow-accent-500/25 hover:scale-105 animate-slide-up btn-glow"
-            style={{ animationDelay: '0.3s' }}
+            style={{ animationDelay: "0.3s" }}
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
               <path
@@ -111,7 +126,10 @@ export default function HomePage() {
         </div>
 
         {/* Stats Preview */}
-        <div className="mt-24 glass-card p-8 animate-slide-up" style={{ animationDelay: '0.7s' }}>
+        <div
+          className="mt-24 glass-card p-8 animate-slide-up"
+          style={{ animationDelay: "0.7s" }}
+        >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <StatPreview label="Total Tracked" value="$12,847" />
             <StatPreview label="Transactions" value="234" />
@@ -129,19 +147,19 @@ export default function HomePage() {
   );
 }
 
-function FeatureCard({ 
-  icon, 
-  title, 
-  description, 
-  delay 
-}: { 
-  icon: React.ReactNode; 
-  title: string; 
+function FeatureCard({
+  icon,
+  title,
+  description,
+  delay,
+}: {
+  icon: React.ReactNode;
+  title: string;
   description: string;
   delay: string;
 }) {
   return (
-    <div 
+    <div
       className="glass-card p-6 hover:border-accent-500/30 transition-all duration-300 animate-slide-up group"
       style={{ animationDelay: delay }}
     >
@@ -162,4 +180,3 @@ function StatPreview({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
