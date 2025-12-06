@@ -307,6 +307,30 @@ You should see: `Ready on http://localhost:3000`
 5. **View** your transactions in the dashboard
 6. **Edit** or delete any incorrectly detected transactions
 
+## Performance Benchmarks
+
+Real-world performance metrics from scanning 200 emails:
+
+```
+📈 SYNC SUMMARY:
+   Emails fetched: 200
+   Emails analyzed: 200
+   Transactions found: 17
+   Conversion rate: 8.5%
+
+⏱️  PERFORMANCE:
+   Claude Analysis: 317.45s | 0.63 emails/sec
+   Database Insert: 0.14s | 124.09 items/sec
+   Total Sync Time: 389.06s (~6.5 minutes for 200 emails)
+   Total inbox scan rate: 0.51 emails/sec
+
+📊 AI CONFIDENCE:
+   Average: 93.2%
+   Median:  95.0%
+   Range:   70% - 100%
+   Distribution: 🟢 High (≥80%): 16 | 🟡 Medium (60-80%): 1 | 🔴 Low (<60%): 0
+```
+
 ## Security & Privacy
 
 - **Read-only access** - We only read emails, never send or modify
