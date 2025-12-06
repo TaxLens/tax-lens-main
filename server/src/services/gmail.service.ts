@@ -75,32 +75,48 @@ export async function refreshAccessToken(userId: string): Promise<string | null>
 }
 
 /**
- * Get the start date for email sync in YYYY/MM/DD format for Gmail query
- * Currently set to November 1st of current year
+ * Get date range for email sync based on year
+ * For prototype: November 1 to December 31 (or today for current year)
  */
-function getSyncStartDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  // Start from November 1st
-  return `${year}/11/1`;
+function getDateRangeForYear(year?: number): { startDate: string; endDate: string } {
+  const currentYear = new Date().getFullYear();
+  const targetYear = year || currentYear;
+  
+  // Start from November 1st for prototype
+  const startDate = `${targetYear}/11/1`;
+  
+  // If it's a past year, include up to Dec 31
+  // If current year, go up to today
+  if (targetYear < currentYear) {
+    return { startDate, endDate: `${targetYear}/12/31` };
+  }
+  
+  return { startDate, endDate: '' }; // No end date for current year (up to now)
 }
 
 /**
- * Fetch all primary inbox emails from the 1st of the current month
+ * Fetch all primary inbox emails for a specific year or date range
+ * @param accessToken - Gmail access token
+ * @param maxResults - Maximum number of emails to fetch
+ * @param year - Optional year to fetch emails for (Jan 1 - Dec 31)
  */
 export async function fetchEmails(
   accessToken: string,
-  maxResults: number = 100
+  maxResults: number = 100,
+  year?: number
 ): Promise<EmailMessage[]> {
   oauth2Client.setCredentials({ access_token: accessToken });
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  // Get the sync start date (November 1st)
-  const syncStartDate = getSyncStartDate();
+  // Get the date range for the specified year
+  const { startDate, endDate } = getDateRangeForYear(year);
   
-  // Query: Primary inbox emails from sync start date
+  // Query: Primary inbox emails within date range
   // category:primary ensures we only get main inbox emails (not promotions, social, updates)
-  const query = `category:primary after:${syncStartDate}`;
+  let query = `category:primary after:${startDate}`;
+  if (endDate) {
+    query += ` before:${endDate}`;
+  }
   
   console.log(`Fetching emails with query: ${query}`);
 
@@ -177,6 +193,6 @@ export async function fetchEmails(
     }
   } while (pageToken && emails.length < maxResults);
 
-  console.log(`Fetched ${emails.length} emails from primary inbox since ${syncStartDate}`);
+  console.log(`Fetched ${emails.length} emails from primary inbox for ${year || 'current'} year (${startDate}${endDate ? ` to ${endDate}` : ''})`);
   return emails;
 }
