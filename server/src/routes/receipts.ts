@@ -9,6 +9,49 @@ import {
 
 const router = Router();
 
+// Helper function to upload file to Supabase Storage
+async function uploadToSupabaseStorage(
+  userId: string,
+  file: Express.Multer.File,
+  transactionDate?: string
+): Promise<string | null> {
+  try {
+    // Determine the year folder based on transaction date or current date
+    const year = transactionDate
+      ? new Date(transactionDate).getFullYear()
+      : new Date().getFullYear();
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = file.originalname.split('.').pop() || 'jpg';
+    const filename = `${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
+    const filePath = `${userId}/${year}/${filename}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('receipts')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Error uploading to Supabase Storage:', error);
+      return null;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('receipts')
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error in uploadToSupabaseStorage:', error);
+    return null;
+  }
+}
+
 // Configure multer for file uploads (memory storage)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -79,7 +122,7 @@ router.post(
         });
       }
 
-      // Return the extracted data for user confirmation
+      // Return the extracted data for user confirmation (include file data for later upload)
       res.json({
         success: true,
         data: {
@@ -91,6 +134,11 @@ router.post(
           transactionDate: transactionData.transactionDate,
           description: transactionData.description,
           confidenceScore: transactionData.confidenceScore,
+        },
+        fileData: {
+          base64: file.buffer.toString("base64"),
+          mimeType: file.mimetype,
+          originalName: file.originalname,
         },
       });
     } catch (error) {
@@ -115,6 +163,7 @@ router.post(
         taxReliefCategory,
         transactionDate,
         description,
+        fileData, // { base64, mimeType, originalName }
       } = req.body;
 
       // Validate required fields
@@ -122,6 +171,22 @@ router.post(
         return res
           .status(400)
           .json({ error: "Merchant and amount are required" });
+      }
+
+      // Upload receipt image to Supabase Storage if file data is provided
+      let receiptUrl: string | null = null;
+      if (fileData?.base64 && fileData?.mimeType) {
+        const buffer = Buffer.from(fileData.base64, "base64");
+        const mockFile = {
+          buffer,
+          mimetype: fileData.mimeType,
+          originalname: fileData.originalName || "receipt.jpg",
+        } as Express.Multer.File;
+        
+        receiptUrl = await uploadToSupabaseStorage(userId, mockFile, transactionDate);
+        if (receiptUrl) {
+          console.log(`📁 Receipt uploaded to storage: ${receiptUrl}`);
+        }
       }
 
       // Generate a unique receipt ID
@@ -145,6 +210,7 @@ router.post(
           email_subject: "Receipt Scan",
           email_snippet: description || "Manually scanned receipt",
           confidence_score: 1.0, // User confirmed
+          receipt_url: receiptUrl,
         })
         .select()
         .single();
