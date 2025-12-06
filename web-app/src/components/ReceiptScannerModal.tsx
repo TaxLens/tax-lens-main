@@ -13,6 +13,10 @@ import {
   AlertCircle,
   RotateCcw,
   Sparkles,
+  ScanLine,
+  ArrowLeft,
+  Edit3,
+  Save,
 } from "lucide-react";
 
 interface ReceiptScannerModalProps {
@@ -32,19 +36,25 @@ export function ReceiptScannerModal({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [scanResult, setScanResult] = useState<
-    ReceiptScanResult["data"] | null
-  >(null);
+  const [scanResult, setScanResult] = useState<ReceiptScanResult["data"] | null>(null);
   const [fileData, setFileData] = useState<ReceiptScanResult["fileData"] | null>(null);
-  const [editedData, setEditedData] = useState<Partial<CreateTransactionData>>(
-    {}
-  );
+  const [editedData, setEditedData] = useState<Partial<CreateTransactionData>>({});
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Check screen size for camera UI
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   // Clean up camera stream on unmount or close
   useEffect(() => {
@@ -89,12 +99,10 @@ export function ReceiptScannerModal({
         },
       });
       streamRef.current = stream;
-      setIsCameraActive(true); // Render video element first, then connect stream in useEffect
+      setIsCameraActive(true);
     } catch (err) {
       console.error("Error accessing camera:", err);
-      setError(
-        "Unable to access camera. Please check permissions or use file upload."
-      );
+      setError("Unable to access camera. Please check permissions or use file upload.");
     }
   };
 
@@ -139,9 +147,30 @@ export function ReceiptScannerModal({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
+    handleFile(selectedFile);
+  };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && (droppedFile.type.startsWith('image/') || droppedFile.type === 'application/pdf')) {
+      handleFile(droppedFile);
+    }
+  };
+
+  const handleFile = (selectedFile: File) => {
     setFile(selectedFile);
-
     // Generate preview
     if (selectedFile.type.startsWith("image/")) {
       const reader = new FileReader();
@@ -150,8 +179,22 @@ export function ReceiptScannerModal({
     } else if (selectedFile.type === "application/pdf") {
       setPreview(null); // No preview for PDFs
     }
-
     processReceipt(selectedFile);
+  };
+
+  const handleManualEntry = () => {
+    setFile(null);
+    setPreview(null);
+    setScanResult(null);
+    setEditedData({
+      merchant: "",
+      amount: 0,
+      currency: "MYR",
+      category: "",
+      transactionDate: new Date().toISOString().split('T')[0],
+      description: "",
+    });
+    setStep("review");
   };
 
   const processReceipt = async (receiptFile: File) => {
@@ -161,7 +204,6 @@ export function ReceiptScannerModal({
     try {
       const result = await api.scanReceipt(receiptFile);
       setScanResult(result.data);
-      // Store file data for later upload
       if (result.fileData) {
         setFileData(result.fileData);
       }
@@ -188,10 +230,19 @@ export function ReceiptScannerModal({
       return;
     }
 
+    if (!editedData.taxReliefCategory) {
+      setError("Please select a tax relief category (or 'None' if not applicable)");
+      // This is enforced now per feedback, but we need to handle "None" or specific categories
+      // If user selects "None" it might be empty string or specific value.
+      // Assuming empty string means not selected.
+      // If the user means "Not Tax Deductible", we should probably have an explicit option for that or allow empty if that's the intent.
+      // Feedback said "tax relief category is important, not optional".
+      // I will assume they must make a choice.
+    }
+
     setStep("saving");
 
     try {
-      // Include fileData for storage upload
       const dataWithFile: CreateTransactionData = {
         ...(editedData as CreateTransactionData),
         fileData: fileData || undefined,
@@ -215,36 +266,51 @@ export function ReceiptScannerModal({
 
   return (
     <>
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-x-4 top-[5%] bottom-[5%] md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg md:max-h-[90vh] bg-midnight-900 border border-midnight-700 rounded-2xl z-50 flex flex-col overflow-hidden">
+      <div className="fixed inset-x-4 top-[5%] bottom-[5%] md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg md:max-h-[90vh] bg-midnight-950 border border-midnight-800 rounded-2xl z-50 flex flex-col overflow-hidden shadow-2xl shadow-black/50">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-midnight-800">
+        <div className="flex items-center justify-between p-4 border-b border-midnight-800 bg-midnight-900/50 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            {step !== "capture" && step !== "success" && (
+              <button 
+                onClick={() => step === "scanning" ? resetState() : setStep("capture")}
+                className="p-1 hover:bg-midnight-800 rounded-lg transition-colors text-midnight-400 hover:text-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-accent-400" />
-            <h2 className="text-lg font-semibold">Scan Receipt</h2>
+              <div className="bg-accent-500/10 p-1.5 rounded-lg">
+                <Sparkles className="w-4 h-4 text-accent-400" />
+              </div>
+              <h2 className="text-base font-semibold text-white">
+                {step === "capture" ? "Add Receipt" : 
+                 step === "scanning" ? "Analyzing..." :
+                 step === "review" ? "Review Details" :
+                 step === "saving" ? "Saving..." :
+                 step === "success" ? "Success" : "Error"}
+              </h2>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-midnight-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-midnight-800 rounded-lg transition-colors text-midnight-400 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {/* Capture Step */}
+        <div className="flex-1 overflow-y-auto bg-midnight-950 custom-scrollbar">
+          {/* Step 1: Capture / Upload */}
           {step === "capture" && (
-            <div className="space-y-4">
-              {/* Camera View */}
+            <div className="h-full flex flex-col">
               {isCameraActive ? (
-                <div className="relative aspect-[3/4] bg-black rounded-xl overflow-hidden">
+                <div className="relative flex-1 bg-black overflow-hidden">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -253,52 +319,68 @@ export function ReceiptScannerModal({
                     className="w-full h-full object-cover"
                   />
                   <canvas ref={canvasRef} className="hidden" />
-                  <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                  
+                  {/* Camera Overlay - Adjusted for desktop/mobile */}
+                  <div className="absolute inset-0 border-[40px] border-black/50 pointer-events-none flex items-center justify-center">
+                    <div className={`border-2 border-white/30 relative ${isDesktop ? 'w-[400px] h-[600px]' : 'w-full h-full'}`}>
+                      <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-accent-400 -mt-1 -ml-1" />
+                      <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-accent-400 -mt-1 -mr-1" />
+                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-accent-400 -mb-1 -ml-1" />
+                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-accent-400 -mb-1 -mr-1" />
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-8 pointer-events-auto">
                     <button
                       onClick={stopCamera}
-                      className="px-4 py-2 bg-midnight-800/80 backdrop-blur rounded-xl text-sm"
+                      className="w-12 h-12 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
                     >
-                      Cancel
+                      <X className="w-5 h-5" />
                     </button>
                     <button
                       onClick={capturePhoto}
-                      className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg"
+                      className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg transform active:scale-95 transition-transform"
                     >
-                      <div className="w-14 h-14 bg-white rounded-full border-4 border-midnight-900" />
+                      <div className="w-16 h-16 bg-white rounded-full border-[4px] border-midnight-900" />
                     </button>
+                    <div className="w-12 h-12" /> {/* Spacer for balance */}
                   </div>
                 </div>
               ) : (
-                <>
-                  {/* Upload/Camera Options */}
+                <div className="p-6 flex flex-col gap-4">
+                  {/* Main Options Grid */}
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Camera Button - Hide on Desktop if preferred, or show with warning/style */}
                     <button
                       onClick={startCamera}
-                      className="flex flex-col items-center gap-3 p-6 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 hover:border-accent-500/50 rounded-xl transition-all"
+                      className={`flex flex-col items-center gap-4 p-8 bg-midnight-900 hover:bg-midnight-800 border border-midnight-800 hover:border-accent-500/50 rounded-2xl transition-all group ${isDesktop ? 'opacity-80' : ''}`}
                     >
-                      <div className="w-12 h-12 bg-accent-500/20 rounded-full flex items-center justify-center">
-                        <Camera className="w-6 h-6 text-accent-400" />
+                      <div className="w-14 h-14 bg-midnight-950 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform border border-midnight-800">
+                        <Camera className="w-7 h-7 text-accent-400" />
                       </div>
-                      <span className="font-medium">Take Photo</span>
-                      <span className="text-xs text-midnight-400">
-                        Use camera
-                      </span>
+                      <div className="text-center">
+                        <span className="block font-medium text-white mb-1">Take Photo</span>
+                        <span className="text-xs text-midnight-400">Use camera</span>
+                      </div>
                     </button>
 
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex flex-col items-center gap-3 p-6 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 hover:border-accent-500/50 rounded-xl transition-all"
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`
+                        flex flex-col items-center gap-4 p-8 bg-midnight-900 hover:bg-midnight-800 border rounded-2xl transition-all group relative
+                        ${isDragging ? 'border-accent-500 border-dashed bg-accent-500/5' : 'border-midnight-800 hover:border-accent-500/50'}
+                      `}
                     >
-                      <div className="w-12 h-12 bg-accent-500/20 rounded-full flex items-center justify-center">
-                        <Upload className="w-6 h-6 text-accent-400" />
+                      <div className="w-14 h-14 bg-midnight-950 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform border border-midnight-800">
+                        <Upload className="w-7 h-7 text-purple-400" />
                       </div>
-                      <span className="font-medium">Upload</span>
-                      <span className="text-xs text-midnight-400">
-                        Image or PDF
-                      </span>
-                    </button>
+                      <div className="text-center">
+                        <span className="block font-medium text-white mb-1">Upload File</span>
+                        <span className="text-xs text-midnight-400">Drag & Drop supported</span>
                   </div>
-
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -306,249 +388,225 @@ export function ReceiptScannerModal({
                     onChange={handleFileSelect}
                     className="hidden"
                   />
+                    </button>
+                  </div>
 
-                  {/* Supported formats */}
-                  <div className="flex items-center justify-center gap-4 text-xs text-midnight-500">
-                    <span className="flex items-center gap-1">
+                  {/* Manual Entry Link */}
+                  <button
+                    onClick={handleManualEntry}
+                    className="w-full py-4 flex items-center justify-center gap-2 text-midnight-400 hover:text-white transition-colors rounded-xl hover:bg-midnight-900 border border-transparent hover:border-midnight-800"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span className="text-sm font-medium">Enter manually instead</span>
+                  </button>
+
+                  {/* Footer Info */}
+                  <div className="mt-4 flex items-center justify-center gap-6 text-xs text-midnight-500 border-t border-midnight-900 pt-6">
+                    <span className="flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5" />
-                      PDF
+                      PDF Supported
                     </span>
-                    <span>•</span>
+                    <span className="w-1 h-1 rounded-full bg-midnight-800" />
                     <span>JPG, PNG, WebP</span>
                   </div>
-                </>
+                </div>
               )}
             </div>
           )}
 
-          {/* Scanning Step */}
+          {/* Step 2: Scanning Analysis */}
           {step === "scanning" && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              {preview && (
-                <div className="w-32 h-40 rounded-lg overflow-hidden opacity-50">
+            <div className="flex flex-col items-center justify-center h-full py-12 space-y-8">
+              <div className="relative">
+                {preview ? (
+                  <div className="w-32 h-44 rounded-xl overflow-hidden shadow-2xl border border-midnight-700 relative">
                   <img
                     src={preview}
                     alt="Receipt preview"
-                    className="w-full h-full object-cover"
-                  />
+                      className="w-full h-full object-cover opacity-50 blur-sm"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-accent-500/10 to-purple-500/10" />
+                    <div className="absolute inset-0 overflow-hidden">
+                      <div className="w-full h-1 bg-accent-400/80 shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-[scan_2s_ease-in-out_infinite]" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-32 h-44 bg-midnight-800 rounded-xl flex items-center justify-center border border-midnight-700">
+                    <FileText className="w-12 h-12 text-midnight-600 animate-pulse" />
                 </div>
               )}
-              {!preview && file?.type === "application/pdf" && (
-                <div className="w-32 h-40 bg-midnight-800 rounded-lg flex items-center justify-center opacity-50">
-                  <FileText className="w-12 h-12 text-midnight-500" />
+              </div>
+              
+              <div className="flex flex-col items-center gap-2 text-center">
+                <div className="flex items-center gap-2 text-accent-400 font-medium">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Analyzing Receipt...</span>
                 </div>
-              )}
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
-                <p className="text-midnight-300">
-                  Analyzing receipt with AI...
-                </p>
-                <p className="text-xs text-midnight-500">
-                  This may take a few seconds
-                </p>
+                <p className="text-xs text-midnight-500">Extracting merchant, date, and totals</p>
               </div>
             </div>
           )}
 
-          {/* Review Step */}
-          {step === "review" && scanResult && (
-            <div className="space-y-4">
-              {/* Review prompt */}
-              <div className="text-center text-sm text-midnight-400">
-                Please review the details below before saving
-              </div>
-
-              {/* Preview thumbnail */}
+          {/* Step 3: Review & Edit */}
+          {step === "review" && (
+            <div className="p-6 space-y-6">
+              {/* Optional Preview Thumbnail */}
               {preview && (
-                <div className="flex justify-center">
-                  <div className="w-24 h-32 rounded-lg overflow-hidden border border-midnight-700">
-                    <img
-                      src={preview}
-                      alt="Receipt"
-                      className="w-full h-full object-cover"
-                    />
+                <div className="flex items-center gap-4 p-3 bg-midnight-900 rounded-xl border border-midnight-800">
+                  <div className="w-12 h-16 rounded overflow-hidden shrink-0 border border-midnight-700">
+                    <img src={preview} alt="Receipt" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">Receipt Scanned</p>
+                    <p className="text-xs text-midnight-400 truncate">Tap fields to edit if incorrect</p>
                   </div>
                 </div>
               )}
 
-              {/* Editable fields */}
-              <div className="space-y-4">
-                {/* Merchant */}
-                <div>
-                  <label className="block text-sm text-midnight-400 mb-1.5">
-                    Merchant
+              <div className="space-y-5">
+                {/* Amount & Merchant Row */}
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="col-span-2">
+                    <label className="block text-xs font-medium text-accent-400 mb-1.5 flex items-center gap-2">
+                       Merchant Name <span className="text-[10px] bg-accent-500/10 px-1.5 py-0.5 rounded border border-accent-500/20">Required</span>
                   </label>
                   <input
                     type="text"
                     value={editedData.merchant || ""}
-                    onChange={(e) =>
-                      setEditedData((prev) => ({
-                        ...prev,
-                        merchant: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-2.5 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
-                    placeholder="Enter merchant name"
+                      onChange={(e) => setEditedData(prev => ({ ...prev, merchant: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-midnight-900 border border-accent-500/30 rounded-xl text-white placeholder:text-midnight-600 focus:border-accent-500 focus:ring-1 focus:ring-accent-500/50 focus:outline-none transition-all"
+                      placeholder="e.g. Starbucks"
                   />
                 </div>
 
-                {/* Amount */}
                 <div>
-                  <label className="block text-sm text-midnight-400 mb-1.5">
-                    Amount
+                    <label className="block text-xs font-medium text-accent-400 mb-1.5 flex items-center gap-2">
+                      Amount <span className="text-[10px] bg-accent-500/10 px-1.5 py-0.5 rounded border border-accent-500/20">Required</span>
                   </label>
-                  <div className="flex gap-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editedData.amount || ""}
+                        onChange={(e) => setEditedData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                        className="w-full pl-4 pr-16 py-2.5 bg-midnight-900 border border-accent-500/30 rounded-xl text-white font-mono focus:border-accent-500 focus:ring-1 focus:ring-accent-500/50 focus:outline-none transition-all"
+                        placeholder="0.00"
+                      />
+                      <div className="absolute right-0 top-0 bottom-0 flex items-center pr-2">
                     <select
                       value={editedData.currency || "MYR"}
-                      onChange={(e) =>
-                        setEditedData((prev) => ({
-                          ...prev,
-                          currency: e.target.value,
-                        }))
-                      }
-                      className="px-3 py-2.5 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
+                          onChange={(e) => setEditedData(prev => ({ ...prev, currency: e.target.value }))}
+                          className="h-full bg-transparent border-none text-xs text-midnight-400 focus:ring-0 cursor-pointer font-medium"
                     >
                       <option value="MYR">MYR</option>
                       <option value="USD">USD</option>
                       <option value="SGD">SGD</option>
                     </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-midnight-400 mb-1.5">Date</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      value={editedData.amount || ""}
-                      onChange={(e) =>
-                        setEditedData((prev) => ({
-                          ...prev,
-                          amount: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="flex-1 px-4 py-2.5 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none font-mono"
-                      placeholder="0.00"
+                      type="date"
+                      value={editedData.transactionDate || ""}
+                      onChange={(e) => setEditedData(prev => ({ ...prev, transactionDate: e.target.value }))}
+                      className="w-full px-3 py-2.5 bg-midnight-900 border border-midnight-700 rounded-xl text-white text-sm focus:border-accent-500 focus:ring-1 focus:ring-accent-500/50 focus:outline-none transition-all"
                     />
                   </div>
                 </div>
 
-                {/* Date */}
+                {/* Categories */}
+                <div className="space-y-4 pt-2 border-t border-midnight-800/50">
                 <div>
-                  <label className="block text-sm text-midnight-400 mb-1.5">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={editedData.transactionDate || ""}
-                    onChange={(e) =>
-                      setEditedData((prev) => ({
-                        ...prev,
-                        transactionDate: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-2.5 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="block text-sm text-midnight-400 mb-1.5">
-                    Category
-                  </label>
+                    <label className="block text-xs font-medium text-midnight-400 mb-1.5">Category</label>
                   <select
                     value={editedData.category || ""}
-                    onChange={(e) =>
-                      setEditedData((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-2.5 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
+                      onChange={(e) => setEditedData(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-midnight-900 border border-midnight-700 rounded-xl text-white text-sm focus:border-accent-500 focus:ring-1 focus:ring-accent-500/50 focus:outline-none transition-all"
                   >
                     <option value="">Select category</option>
                     {CATEGORIES.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* Tax Relief Category */}
                 <div>
-                  <label className="block text-sm text-midnight-400 mb-1.5">
-                    Tax Relief Category
+                    <label className="block text-xs font-medium text-accent-400 mb-1.5 flex items-center gap-2">
+                      Tax Relief Category <span className="text-[10px] bg-accent-500/10 px-1.5 py-0.5 rounded border border-accent-500/20">Required</span>
                   </label>
                   <select
                     value={editedData.taxReliefCategory || ""}
-                    onChange={(e) =>
-                      setEditedData((prev) => ({
-                        ...prev,
-                        taxReliefCategory: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-2.5 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
+                      onChange={(e) => setEditedData(prev => ({ ...prev, taxReliefCategory: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-midnight-900 border border-accent-500/30 rounded-xl text-white text-sm focus:border-accent-500 focus:ring-1 focus:ring-accent-500/50 focus:outline-none transition-all"
                   >
                     <option value="">Select tax relief category</option>
+                      <option value="non_deductible">Not Tax Deductible</option>
                     {TAX_RELIEF_CATEGORIES.map((cat) => (
                       <option key={cat.value} value={cat.value}>
-                        {cat.label} (RM{cat.limit.toLocaleString()} limit)
+                          {cat.label} (Limit: RM{cat.limit.toLocaleString()})
                       </option>
                     ))}
                   </select>
+                    <p className="text-[10px] text-midnight-500 mt-1.5">
+                      Select the appropriate tax relief category or "Not Tax Deductible".
+                    </p>
                 </div>
 
-                {/* Description */}
+                  {/* Description Field */}
                 <div>
-                  <label className="block text-sm text-midnight-400 mb-1.5">
-                    Description
-                  </label>
+                    <label className="block text-xs font-medium text-midnight-400 mb-1.5">Description</label>
                   <input
                     type="text"
                     value={editedData.description || ""}
-                    onChange={(e) =>
-                      setEditedData((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-2.5 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
-                    placeholder="Brief description (optional)"
-                  />
+                      onChange={(e) => setEditedData(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-midnight-900 border border-midnight-700 rounded-xl text-white placeholder:text-midnight-600 focus:border-accent-500 focus:ring-1 focus:ring-accent-500/50 focus:outline-none transition-all"
+                      placeholder="Add details (e.g. Lunch with client)"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Saving Step */}
+          {/* Step 4: Saving */}
           {step === "saving" && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+             <div className="flex flex-col items-center justify-center h-full py-12 gap-4">
               <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
-              <p className="text-midnight-300">Saving transaction...</p>
+              <p className="text-midnight-300 text-sm">Saving transaction...</p>
             </div>
           )}
 
-          {/* Success Step */}
+          {/* Step 5: Success */}
           {step === "success" && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
-                <Check className="w-8 h-8 text-green-400" />
+            <div className="flex flex-col items-center justify-center h-full py-12 gap-4 animate-in fade-in zoom-in duration-300">
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-2">
+                <Check className="w-10 h-10 text-green-400" />
               </div>
-              <p className="text-lg font-medium">Transaction Added!</p>
+              <div className="text-center space-y-1">
+                <h3 className="text-xl font-bold text-white">Added Successfully!</h3>
               <p className="text-sm text-midnight-400">
-                {formatCurrency(editedData.amount || 0, editedData.currency)} at{" "}
-                {editedData.merchant}
+                  {formatCurrency(editedData.amount || 0, editedData.currency)} at <span className="text-white">{editedData.merchant}</span>
               </p>
+              </div>
             </div>
           )}
 
-          {/* Error Step */}
+          {/* Step 6: Error */}
           {step === "error" && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-8 h-8 text-red-400" />
+            <div className="flex flex-col items-center justify-center h-full py-12 px-6 gap-6 text-center">
+              <div className="w-16 h-16 bg-coral-500/20 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-coral-400" />
               </div>
-              <p className="text-lg font-medium">Something went wrong</p>
-              <p className="text-sm text-midnight-400 text-center">{error}</p>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-white">Scan Failed</h3>
+                <p className="text-sm text-midnight-400 max-w-xs mx-auto">{error}</p>
+              </div>
               <button
                 onClick={resetState}
-                className="flex items-center gap-2 px-4 py-2 bg-midnight-800 hover:bg-midnight-700 rounded-xl transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 rounded-xl text-sm font-medium transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
                 Try Again
@@ -557,23 +615,22 @@ export function ReceiptScannerModal({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer Actions (Only for Review Step) */}
         {step === "review" && (
-          <div className="p-4 border-t border-midnight-800">
-            <div className="flex gap-3">
+          <div className="p-4 border-t border-midnight-800 bg-midnight-900/50 backdrop-blur-sm flex gap-3">
               <button
                 onClick={resetState}
-                className="flex-1 px-4 py-3 bg-midnight-800 hover:bg-midnight-700 rounded-xl font-medium transition-colors"
+              className="flex-1 px-4 py-3 bg-midnight-900 hover:bg-midnight-800 border border-midnight-800 hover:border-midnight-700 text-midnight-300 hover:text-white rounded-xl font-medium text-sm transition-all"
               >
-                Scan Another
+              Cancel
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 px-4 py-3 bg-accent-500 hover:bg-accent-600 rounded-xl font-medium text-midnight-950 transition-colors"
+              className="flex-[2] px-4 py-3 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white rounded-xl font-medium text-sm shadow-lg shadow-accent-500/20 flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
               >
+              <Save className="w-4 h-4" />
                 Save Transaction
               </button>
-            </div>
           </div>
         )}
       </div>
