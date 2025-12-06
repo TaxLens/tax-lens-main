@@ -173,6 +173,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#3b82f6',
   },
+  userInfoName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
 });
 
 // Format currency for PDF
@@ -194,13 +200,15 @@ interface TaxReportPDFProps {
   annualSalary: number;
   reliefData: ReliefData;
   totalTrackedRelief: number;
+  userName?: string | null;
 }
 
 export function TaxReportPDF({ 
   year, 
   annualSalary, 
   reliefData,
-  totalTrackedRelief 
+  totalTrackedRelief,
+  userName,
 }: TaxReportPDFProps) {
   const taxCalculation = calculateTax(annualSalary, totalTrackedRelief);
   const epfDetails = calculateEPF(annualSalary);
@@ -233,8 +241,16 @@ export function TaxReportPDF({
           <Text style={styles.yearBadge}>Year of Assessment {year}</Text>
         </View>
 
+        {/* User Info */}
+        {/* {userName && (
+          <View style={styles.userInfo}>
+            <Text style={styles.userInfoName}>{userName}</Text>
+          </View>
+        )} */}
+
         {/* Tax Summary Section */}
         <View style={styles.section}>
+        <Text style={styles.userInfoName}>Name: {userName}</Text>
           <Text style={styles.sectionTitle}>Tax Summary</Text>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
