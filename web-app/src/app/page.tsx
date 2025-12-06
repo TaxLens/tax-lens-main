@@ -51,7 +51,7 @@ export default function HomePage() {
           </div>
 
           <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            Track Every Dollar{' '}
+            Track Every Ringgit{' '}
             <span className="gradient-text">Automatically</span>
           </h1>
 
