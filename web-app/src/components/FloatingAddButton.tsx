@@ -24,10 +24,10 @@ export function FloatingAddButton({ onClick }: FloatingAddButtonProps) {
       {/* Button */}
       <div className="relative flex items-center gap-2 px-5 py-4 bg-accent-500 hover:bg-accent-400 rounded-full shadow-lg shadow-accent-500/25 transition-all duration-300 ease-out transform hover:scale-105">
         <div className="relative">
-          <Receipt className={`w-5 h-5 text-midnight-950 transition-transform duration-300 ${isHovered ? 'scale-0' : 'scale-100'}`} />
-          <Camera className={`w-5 h-5 text-midnight-950 absolute inset-0 transition-transform duration-300 ${isHovered ? 'scale-100' : 'scale-0'}`} />
+          <Receipt className={`w-5 h-5 text-white transition-transform duration-300 ${isHovered ? 'scale-0' : 'scale-100'}`} />
+          <Camera className={`w-5 h-5 text-white absolute inset-0 transition-transform duration-300 ${isHovered ? 'scale-100' : 'scale-0'}`} />
         </div>
-        <span className="font-semibold text-midnight-950 whitespace-nowrap">
+        <span className="font-semibold text-white whitespace-nowrap">
           Scan Receipt
         </span>
       </div>

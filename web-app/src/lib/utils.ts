@@ -126,10 +126,16 @@ export function getCurrentYearDateRange(): { startDate: string; endDate: string 
 // ==========================================
 // Malaysian Tax Calculation (YA 2024)
 // Based on: https://www.hasil.gov.my/individu/kitaran-cukai-individu/lapor-pendapatan/kadar-cukai/
+// EPF Relief: https://www.payrollpanda.my/help/what-tax-deductions-and-rebates-can-be-claimed-in-the-year-2025/
+// EPF Rates: https://www.kwsp.gov.my/en/employer/responsibilities/mandatory-contribution
 // ==========================================
 
 // Personal relief that every individual taxpayer gets
 export const PERSONAL_RELIEF = 9000;
+
+// EPF (KWSP) Configuration
+export const EPF_EMPLOYEE_RATE = 0.11; // 11% for employees under 60
+export const EPF_RELIEF_LIMIT = 4000; // Maximum tax relief for EPF contributions
 
 // Malaysian progressive tax brackets for YA 2024
 export const MALAYSIAN_TAX_BRACKETS = [
@@ -151,13 +157,39 @@ export interface TaxBracketInfo {
   marginalRate: number;
 }
 
+export interface EPFCalculationResult {
+  monthlySalary: number;
+  monthlyEPF: number;
+  annualEPF: number;
+  epfTaxRelief: number; // Capped at EPF_RELIEF_LIMIT
+}
+
 export interface TaxCalculationResult {
   annualIncome: number;
-  totalTaxRelief: number;
+  epfDetails: EPFCalculationResult;
+  totalTaxRelief: number; // From tracked transactions
+  totalDeductions: number; // Personal Relief + EPF Relief + Transaction Relief
   chargeableIncome: number;
   taxPayable: number;
   effectiveRate: number;
   bracketInfo: TaxBracketInfo;
+}
+
+/**
+ * Calculate EPF contribution and tax relief
+ */
+export function calculateEPF(annualSalary: number): EPFCalculationResult {
+  const monthlySalary = annualSalary / 12;
+  const monthlyEPF = Math.round(monthlySalary * EPF_EMPLOYEE_RATE * 100) / 100;
+  const annualEPF = Math.round(monthlyEPF * 12 * 100) / 100;
+  const epfTaxRelief = Math.min(annualEPF, EPF_RELIEF_LIMIT);
+
+  return {
+    monthlySalary: Math.round(monthlySalary * 100) / 100,
+    monthlyEPF,
+    annualEPF,
+    epfTaxRelief,
+  };
 }
 
 /**
@@ -216,14 +248,20 @@ export function calculateProgressiveTax(chargeableIncome: number): number {
 }
 
 /**
- * Full tax calculation including reliefs
+ * Full tax calculation including EPF and other reliefs
  */
 export function calculateTax(
   annualIncome: number,
   totalTaxRelief: number = 0
 ): TaxCalculationResult {
-  // Chargeable income = Annual income - Personal relief - Tax relief from deductions
-  const chargeableIncome = Math.max(0, annualIncome - PERSONAL_RELIEF - totalTaxRelief);
+  // Calculate EPF contribution and relief
+  const epfDetails = calculateEPF(annualIncome);
+  
+  // Total deductions = Personal Relief + EPF Relief + Transaction Relief
+  const totalDeductions = PERSONAL_RELIEF + epfDetails.epfTaxRelief + totalTaxRelief;
+  
+  // Chargeable income = Annual income - All deductions
+  const chargeableIncome = Math.max(0, annualIncome - totalDeductions);
   
   // Calculate tax payable
   const taxPayable = calculateProgressiveTax(chargeableIncome);
@@ -236,7 +274,9 @@ export function calculateTax(
   
   return {
     annualIncome,
+    epfDetails,
     totalTaxRelief,
+    totalDeductions,
     chargeableIncome,
     taxPayable,
     effectiveRate: Math.round(effectiveRate * 100) / 100,

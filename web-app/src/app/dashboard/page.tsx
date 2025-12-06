@@ -329,46 +329,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            icon={<CreditCard className="w-6 h-6" />}
-            label="Total Spending"
-            value={formatCurrency(summary?.total || 0)}
-            isLoading={isLoadingData}
-          />
-          <StatCard
-            icon={<Receipt className="w-6 h-6" />}
-            label="Transactions"
-            value={summary?.count?.toString() || "0"}
-            isLoading={isLoadingData}
-          />
-          <StatCard
-            icon={<PiggyBank className="w-6 h-6" />}
-            label="Tax Relief Eligible"
-            value={formatCurrency(summary?.totalTaxRelief || 0)}
-            isLoading={isLoadingData}
-            highlight
-          />
-          <StatCard
-            icon={<FileText className="w-6 h-6" />}
-            label="Categories Claimed"
-            value={Object.keys(summary?.byTaxRelief || {})
-              .filter(
-                (k) =>
-                  k !== "non_deductible" &&
-                  (summary?.byTaxRelief?.[k]?.amount || 0) > 0
-              )
-              .length.toString()}
-            isLoading={isLoadingData}
-          />
-        </div>
-
         {/* Tax Summary Card */}
         <TaxSummaryCard
           annualSalary={annualSalary}
           totalTaxRelief={summary?.totalTaxRelief || 0}
           isLoading={isLoadingData}
+          selectedYear={selectedYear}
         />
 
         {/* Tax Relief Breakdown */}
@@ -583,60 +549,16 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  isLoading,
-  highlight,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  isLoading: boolean;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`glass-card p-6 ${highlight ? "border-accent-500/30" : ""}`}
-    >
-      <div className="flex items-center gap-4">
-        <div
-          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            highlight
-              ? "bg-accent-500/20 text-accent-300"
-              : "bg-accent-500/10 text-accent-400"
-          }`}
-        >
-          {icon}
-        </div>
-        <div>
-          <p className="text-midnight-400 text-sm">{label}</p>
-          {isLoading ? (
-            <div className="h-8 w-24 rounded skeleton mt-1" />
-          ) : (
-            <p
-              className={`text-2xl font-bold font-mono ${
-                highlight ? "gradient-text" : ""
-              }`}
-            >
-              {value}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function TaxSummaryCard({
   annualSalary,
   totalTaxRelief,
   isLoading,
+  selectedYear,
 }: {
   annualSalary: number;
   totalTaxRelief: number;
   isLoading: boolean;
+  selectedYear: number;
 }) {
   // Calculate tax with reliefs applied
   const taxCalculation = calculateTax(annualSalary, totalTaxRelief);
@@ -666,7 +588,7 @@ function TaxSummaryCard({
 
   return (
     <div className="glass-card p-6 mb-8">
-      <h2 className="text-lg font-semibold mb-4">Tax Estimation (YA 2024)</h2>
+      <h2 className="text-lg font-semibold mb-4">Tax Estimation (YA {selectedYear})</h2>
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -683,14 +605,37 @@ function TaxSummaryCard({
                 {formatCurrency(annualSalary)}
               </p>
             </div>
-            <div>
-              <p className="text-midnight-400 text-sm mb-1">Total Deductions</p>
+            <div className="relative group">
+              <p className="text-midnight-400 text-sm mb-1 flex items-center gap-1">
+                Total Deductions
+                <span className="text-midnight-500 cursor-help">ⓘ</span>
+              </p>
               <p className="text-xl font-bold font-mono text-accent-400">
-                {formatCurrency(totalTaxRelief + PERSONAL_RELIEF)}
+                {formatCurrency(taxCalculation.totalDeductions)}
               </p>
-              <p className="text-xs text-midnight-500">
-                (Personal: {formatCurrency(PERSONAL_RELIEF)} + Relief: {formatCurrency(totalTaxRelief)})
-              </p>
+              
+              {/* Tooltip */}
+              <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-midnight-900 border border-midnight-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                <p className="text-xs text-midnight-400 mb-2 font-medium">Breakdown:</p>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-midnight-400">Personal Relief</span>
+                    <span className="font-mono text-white">{formatCurrency(PERSONAL_RELIEF)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-400">EPF Relief</span>
+                    <span className="font-mono text-white">{formatCurrency(taxCalculation.epfDetails.epfTaxRelief)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-400">Tracked Expenses</span>
+                    <span className="font-mono text-white">{formatCurrency(totalTaxRelief)}</span>
+                  </div>
+                  <div className="border-t border-midnight-700 pt-1 mt-1 flex justify-between font-medium">
+                    <span className="text-midnight-300">Total</span>
+                    <span className="font-mono text-accent-400">{formatCurrency(taxCalculation.totalDeductions)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div>
               <p className="text-midnight-400 text-sm mb-1">Chargeable Income</p>
