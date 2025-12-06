@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useSidebar } from '@/context/SidebarContext';
-import { useYear, getCurrentFilingYear } from '@/context/YearContext';
+import { useYear } from '@/context/YearContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { FloatingAddButton } from '@/components/FloatingAddButton';
@@ -28,6 +28,7 @@ import {
   FolderOpen,
   ExternalLink
 } from 'lucide-react';
+import { useRef } from 'react';
 import Link from 'next/link';
 
 
@@ -47,6 +48,23 @@ function TransactionsContent() {
   
   // Year filter dropdown state
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Split years for pill selector
+  const recentYears = availableYears.slice(0, 3);
+  const olderYears = availableYears.slice(3);
+  const isOlderYearSelected = olderYears.includes(selectedYear);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
+        setYearDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -193,59 +211,102 @@ function TransactionsContent() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl font-display font-bold">Transactions</h1>
-              
-              {/* Year Selector Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 bg-midnight-800 hover:bg-midnight-700 border border-midnight-600 rounded-lg transition-colors"
-                >
-                  <Calendar className="w-4 h-4 text-accent-400" />
-                  <span className="font-medium">{selectedYear}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {yearDropdownOpen && (
-                  <div className="absolute top-full mt-2 w-full bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 overflow-hidden">
-                    {availableYears.map((year) => (
-                      <button
-                        key={year}
-                        onClick={() => handleYearChange(year)}
-                        className={`w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors ${
-                          year === selectedYear ? 'bg-accent-500/20 text-accent-400' : ''
-                        }`}
-                      >
-                        {year}
-                        {year === getCurrentFilingYear() && (
-                          <span className="ml-2 text-xs text-accent-400">(filing now)</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <h1 className="text-3xl font-display font-bold mb-2">Transactions</h1>
             <p className="text-midnight-400">
               {total} transaction{total !== 1 ? 's' : ''} found for Tax Year {selectedYear}
             </p>
           </div>
           
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${
-              showFilters || hasActiveFilters
-                ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
-                : 'bg-midnight-800/50 text-midnight-300 hover:bg-midnight-800'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-            {hasActiveFilters && (
-              <span className="w-2 h-2 rounded-full bg-accent-400" />
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Year Selector - Pill Style */}
+            <div className="bg-midnight-900/50 p-1 rounded-xl border border-midnight-800 flex items-center gap-1">
+              {/* Recent years as buttons */}
+              {recentYears.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => handleYearChange(year)}
+                  className={`
+                    px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap
+                    ${
+                      selectedYear === year
+                        ? 'bg-accent-500 text-white shadow-lg shadow-accent-500/20'
+                        : 'text-midnight-400 hover:text-white hover:bg-midnight-800'
+                    }
+                  `}
+                >
+                  {year}
+                </button>
+              ))}
+
+              {/* Older years dropdown */}
+              {olderYears.length > 0 && (
+                <div className="relative" ref={yearDropdownRef}>
+                  <button
+                    onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
+                    className={`
+                      px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-1.5
+                      ${
+                        isOlderYearSelected
+                          ? 'bg-accent-500 text-white shadow-lg shadow-accent-500/20'
+                          : 'text-midnight-400 hover:text-white hover:bg-midnight-800'
+                      }
+                    `}
+                  >
+                    {isOlderYearSelected ? (
+                      <>
+                        {selectedYear}
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
+                      </>
+                    ) : (
+                      <>
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>More</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
+                      </>
+                    )}
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {yearDropdownOpen && (
+                    <div className="absolute top-full right-0 mt-2 min-w-[120px] bg-midnight-900 border border-midnight-700 rounded-xl shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {olderYears.map((year) => (
+                        <button
+                          key={year}
+                          onClick={() => handleYearChange(year)}
+                          className={`
+                            w-full px-4 py-2 text-sm text-left transition-colors
+                            ${
+                              selectedYear === year
+                                ? 'bg-accent-500/20 text-accent-400'
+                                : 'text-midnight-300 hover:bg-midnight-800 hover:text-white'
+                            }
+                          `}
+                        >
+                          {year}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Filter Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                showFilters || hasActiveFilters
+                  ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
+                  : 'bg-midnight-800/50 text-midnight-300 hover:bg-midnight-800'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              {hasActiveFilters && (
+                <span className="w-2 h-2 rounded-full bg-accent-400" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Filters Panel */}
