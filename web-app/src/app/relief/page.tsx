@@ -9,7 +9,8 @@ import { api, TransactionSummary } from '@/lib/api';
 import { 
   formatCurrency, 
   TAX_RELIEF_CATEGORIES,
-  getTaxReliefColor 
+  calculateEPF,
+  EPF_RELIEF_LIMIT
 } from '@/lib/utils';
 import { 
   Wallet,
@@ -46,8 +47,20 @@ export default function ReliefPage() {
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
+  const [annualSalary, setAnnualSalary] = useState<number>(0);
   
   const availableYears = getAvailableTaxYears();
+  
+  // Load salary from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('user-annual-salary');
+    if (stored) {
+      setAnnualSalary(parseFloat(stored));
+    }
+  }, []);
+  
+  // Calculate EPF details
+  const epfDetails = calculateEPF(annualSalary);
 
   const fetchData = useCallback(async () => {
     try {
@@ -89,12 +102,12 @@ export default function ReliefPage() {
     cat => cat.value !== 'non_deductible' && cat.value !== 'individual'
   );
 
-  // Calculate totals
-  const totalLimit = deductibleCategories.reduce((sum, cat) => sum + cat.limit, 0);
+  // Calculate totals (including EPF)
+  const totalLimit = deductibleCategories.reduce((sum, cat) => sum + cat.limit, 0) + EPF_RELIEF_LIMIT;
   const totalClaimed = deductibleCategories.reduce((sum, cat) => {
     const claimed = summary?.byTaxRelief?.[cat.value]?.amount || 0;
     return sum + Math.min(claimed, cat.limit);
-  }, 0);
+  }, 0) + epfDetails.epfTaxRelief;
 
   return (
     <div className="min-h-screen mesh-bg">
@@ -197,10 +210,10 @@ export default function ReliefPage() {
           <Info className="w-5 h-5 text-accent-400 shrink-0 mt-0.5" />
           <div className="text-sm text-midnight-300">
             <p className="mb-1">
-              <span className="font-medium text-accent-400">Note:</span> Personal Relief (RM 9,000) and EPF Relief (up to RM 4,000) are automatically calculated based on your salary in Settings.
+              <span className="font-medium text-accent-400">Note:</span> Personal Relief (RM 9,000) is automatically applied. EPF Relief is calculated from your salary in Settings.
             </p>
             <p>
-              The categories below are additional deductions from your tracked transactions.
+              Track your deductions from transactions and EPF contributions below.
             </p>
           </div>
         </div>
@@ -212,7 +225,77 @@ export default function ReliefPage() {
               <div key={i} className="glass-card p-5 h-40 skeleton" />
             ))
           ) : (
-            deductibleCategories.map((category) => {
+            <>
+              {/* EPF Relief Card */}
+              {(() => {
+                const epfClaimed = epfDetails.epfTaxRelief;
+                const epfPercentage = (epfClaimed / EPF_RELIEF_LIMIT) * 100;
+                const epfRemaining = EPF_RELIEF_LIMIT - epfClaimed;
+                const epfMaxed = epfClaimed >= EPF_RELIEF_LIMIT;
+                const epfColor = '#22c55e';
+                
+                return (
+                  <div 
+                    className={`glass-card p-5 transition-all duration-200 hover:border-midnight-600 ${
+                      epfMaxed ? 'border-green-500/30' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: epfColor }}
+                        />
+                        <h3 className="font-medium text-sm">EPF (KWSP) Contribution</h3>
+                      </div>
+                      {epfMaxed && (
+                        <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      )}
+                    </div>
+                    
+                    <div className="mb-3">
+                      <div className="flex items-baseline justify-between mb-1">
+                        <span className="text-xl font-bold font-mono" style={{ color: epfColor }}>
+                          {formatCurrency(epfClaimed)}
+                        </span>
+                        <span className="text-sm text-midnight-400">
+                          / {formatCurrency(EPF_RELIEF_LIMIT)}
+                        </span>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="h-2 bg-midnight-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.min(100, epfPercentage)}%`,
+                            backgroundColor: epfColor
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-midnight-400">
+                        {annualSalary === 0 ? (
+                          <Link href="/settings" className="text-accent-400 hover:underline">
+                            Set salary in Settings
+                          </Link>
+                        ) : epfMaxed ? (
+                          <span className="text-green-400">Limit reached!</span>
+                        ) : (
+                          <>Remaining: <span className="font-mono text-white">{formatCurrency(epfRemaining)}</span></>
+                        )}
+                      </span>
+                      <span className="font-mono text-midnight-500">
+                        {epfPercentage.toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              {deductibleCategories.map((category) => {
               const reliefData = summary?.byTaxRelief?.[category.value];
               const claimed = reliefData?.amount || 0;
               const claimedCapped = Math.min(claimed, category.limit);
@@ -276,7 +359,8 @@ export default function ReliefPage() {
                   </div>
                 </div>
               );
-            })
+            })}
+            </>
           )}
         </div>
 
