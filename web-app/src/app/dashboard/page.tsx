@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { api, Transaction, TransactionSummary, SyncStatus } from '@/lib/api';
-import { formatCurrency, getTaxReliefColor, TAX_RELIEF_CATEGORIES, getCurrentMonthDateRange } from '@/lib/utils';
+import { formatCurrency, getTaxReliefColor, getCurrentMonthDateRange } from '@/lib/utils';
 import { 
   RefreshCw, 
   TrendingUp, 
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const { isCollapsed: sidebarCollapsed } = useSidebar();
 
   const fetchData = useCallback(async () => {
     try {
@@ -120,7 +122,7 @@ export default function DashboardPage() {
     <div className="min-h-screen mesh-bg">
       <Sidebar />
       
-      <main className="ml-64 p-8">
+      <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -209,7 +211,7 @@ export default function DashboardPage() {
             </div>
           ) : taxReliefData.length > 0 ? (
             <>
-              <div className="h-72">
+              <div className="h-72 chart-dark-bg">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={taxReliefData} layout="vertical" margin={{ left: 20, right: 20 }}>
                     <XAxis 
@@ -228,6 +230,7 @@ export default function DashboardPage() {
                       width={150}
                     />
                     <Tooltip
+                      cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
                           const data = payload[0].payload;
@@ -248,6 +251,7 @@ export default function DashboardPage() {
                       fill="#3b82f6"
                       radius={[0, 4, 4, 0]}
                       name="Claimed"
+                      background={false}
                     />
                   </BarChart>
                 </ResponsiveContainer>

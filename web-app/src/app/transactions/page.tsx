@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { api, Transaction } from '@/lib/api';
@@ -41,6 +42,7 @@ function TransactionsContent() {
     endDate: '',
   });
   const [showFilters, setShowFilters] = useState(false);
+  const { isCollapsed: sidebarCollapsed } = useSidebar();
   
   // Pagination
   const [page, setPage] = useState(0);
@@ -166,7 +168,7 @@ function TransactionsContent() {
     <div className="min-h-screen mesh-bg">
       <Sidebar />
       
-      <main className="ml-64 p-8">
+      <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

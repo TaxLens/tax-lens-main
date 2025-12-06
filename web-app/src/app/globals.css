@@ -155,3 +155,26 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Recharts dark theme fix */
+.chart-dark-bg {
+  position: relative;
+}
+
+/* Use CSS to directly target and hide the background rect */
+.chart-dark-bg .recharts-surface > rect:first-child,
+.chart-dark-bg .recharts-bar-background-rectangle,
+.chart-dark-bg .recharts-cartesian-grid-bg {
+  display: none !important;
+}
+
+/* Tooltip cursor - subtle dark highlight on hover */
+.chart-dark-bg .recharts-tooltip-cursor {
+  fill: rgba(255, 255, 255, 0.05) !important;
+  transition: fill 0.2s ease;
+}
+
+/* Alternative: set background to match dark theme */
+.chart-dark-bg .recharts-wrapper svg {
+  background: var(--background-secondary) !important;
+}
