@@ -11,13 +11,11 @@ import {
   TransactionCardSkeleton,
 } from "@/components/TransactionCard";
 import { api, Transaction, TransactionSummary, SyncStatus } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
 import {
   RefreshCw,
   ArrowRight,
   CheckCircle2,
   AlertCircle,
-  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
