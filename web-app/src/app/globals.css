@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background-primary: #0a1929;
+  --background-secondary: #102a43;
+  --accent-primary: #14b8a6;
+  --accent-secondary: #2dd4bf;
+  --text-primary: #f0f4f8;
+  --text-secondary: #9fb3c8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--background-primary);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-secondary);
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(16, 42, 67, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 179, 237, 0.1);
+  border-radius: 16px;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 50%, #5eead4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Button hover glow effect */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(45, 212, 191, 0.3),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.btn-glow:hover::before {
+  left: 100%;
+}
+
+/* Mesh background pattern */
+.mesh-bg {
+  background-image: 
+    radial-gradient(at 40% 20%, rgba(20, 184, 166, 0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(45, 212, 191, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(14, 116, 144, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(244, 63, 94, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(20, 184, 166, 0.1) 0px, transparent 50%);
+}
+
+/* Animated gradient border */
+.gradient-border {
+  position: relative;
+  background: var(--background-secondary);
+  border-radius: 16px;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #14b8a6, #0d9488, #f43f5e, #14b8a6);
+  background-size: 300% 300%;
+  animation: gradient-rotate 4s ease infinite;
+  z-index: -1;
+}
+
+@keyframes gradient-rotate {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Loading skeleton */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(99, 179, 237, 0.1) 25%,
+    rgba(99, 179, 237, 0.2) 50%,
+    rgba(99, 179, 237, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Category colors */
+.category-food { --category-color: #22c55e; }
+.category-transport { --category-color: #3b82f6; }
+.category-shopping { --category-color: #f59e0b; }
+.category-entertainment { --category-color: #ec4899; }
+.category-bills { --category-color: #ef4444; }
+.category-subscription { --category-color: #8b5cf6; }
+.category-travel { --category-color: #06b6d4; }
+.category-health { --category-color: #10b981; }
+.category-education { --category-color: #6366f1; }
+.category-other { --category-color: #64748b; }
+
+/* Number formatting */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
