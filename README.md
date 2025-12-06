@@ -1,6 +1,6 @@
-# SpendLens - AI-Powered Spending Tracker
+# TaxLens - AI-Powered Spending Tracker
 
-Track your spending automatically by connecting your Gmail. SpendLens uses Claude AI to detect transactions from receipts, invoices, and payment confirmations in your emails.
+Track your spending automatically by connecting your Gmail. TaxLens uses Claude AI to detect transactions from receipts, invoices, and payment confirmations in your emails.
 
 ## Features
 

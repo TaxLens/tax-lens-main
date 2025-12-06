@@ -1,4 +1,4 @@
-# SpendLens - Web Application
+# TaxLens - Web Application
 
 Next.js frontend for the Spending Transaction Tracker.
 

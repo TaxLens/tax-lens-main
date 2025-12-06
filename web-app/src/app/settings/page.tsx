@@ -154,7 +154,7 @@ export default function SettingsPage() {
           
           <div className="mt-4 p-4 bg-midnight-800/50 rounded-xl">
             <p className="text-sm text-midnight-400">
-              SpendLens only reads your emails to detect transactions. We never send, delete, or modify your emails.
+              TaxLens only reads your emails to detect transactions. We never send, delete, or modify your emails.
               You can revoke access at any time from your{' '}
               <a
                 href="https://myaccount.google.com/permissions"

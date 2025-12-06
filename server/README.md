@@ -1,4 +1,4 @@
-# Spending Tracker - Backend Server
+# TaxLens - Backend Server
 
 Node.js/Express backend for the Spending Transaction Tracker application.
 

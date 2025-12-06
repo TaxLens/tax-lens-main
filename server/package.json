@@ -1,5 +1,5 @@
 {
-  "name": "spending-tracker-server",
+  "name": "taxlens-server",
   "version": "1.0.0",
   "description": "Backend server for spending transaction tracker",
   "main": "dist/index.js",

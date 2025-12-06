@@ -30,7 +30,7 @@ export function Sidebar() {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center">
           <Sparkles className="w-5 h-5 text-midnight-950" />
         </div>
-        <span className="font-display text-xl font-bold gradient-text">SpendLens</span>
+        <span className="font-display text-xl font-bold gradient-text">TaxLens</span>
       </div>
 
       {/* Navigation */}

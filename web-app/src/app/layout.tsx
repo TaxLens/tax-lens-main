@@ -3,7 +3,7 @@ import { Providers } from './providers'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'SpendLens - Track Your Spending',
+  title: 'TaxLens - Track Your Spending',
   description: 'AI-powered spending tracker that automatically detects transactions from your emails',
 }
 
