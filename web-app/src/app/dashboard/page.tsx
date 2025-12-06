@@ -216,7 +216,7 @@ export default function DashboardPage() {
                       type="number" 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#9fb3c8', fontSize: 12 }}
+                      tick={{ fill: '#a1a1aa', fontSize: 12 }}
                       tickFormatter={(value) => `RM${value.toLocaleString()}`}
                     />
                     <YAxis 
@@ -224,7 +224,7 @@ export default function DashboardPage() {
                       dataKey="name" 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#9fb3c8', fontSize: 11 }}
+                      tick={{ fill: '#a1a1aa', fontSize: 11 }}
                       width={150}
                     />
                     <Tooltip
@@ -245,7 +245,7 @@ export default function DashboardPage() {
                     />
                     <Bar
                       dataKey="claimed"
-                      fill="#14b8a6"
+                      fill="#3b82f6"
                       radius={[0, 4, 4, 0]}
                       name="Claimed"
                     />

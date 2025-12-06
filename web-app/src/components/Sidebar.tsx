@@ -24,7 +24,7 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-midnight-900 border-r border-midnight-800 flex flex-col z-50">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-midnight-950 border-r border-midnight-800 flex flex-col z-50">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-6 border-b border-midnight-800">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center">
@@ -60,7 +60,7 @@ export function Sidebar() {
 
       {/* User section */}
       <div className="px-4 py-4 border-t border-midnight-800">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-midnight-800 mb-3">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-midnight-900 mb-3">
           <div className="w-9 h-9 rounded-full bg-accent-500/20 flex items-center justify-center">
             <User className="w-4 h-4 text-accent-400" />
           </div>
