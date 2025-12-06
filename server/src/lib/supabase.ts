@@ -31,9 +31,12 @@ export interface Transaction {
   amount: number | null;
   currency: string;
   category: string | null;
+  tax_relief_category: string | null;
   transaction_date: string | null;
   email_subject: string | null;
   email_snippet: string | null;
+  email_date: string | null;
+  description: string | null;
   confidence_score: number | null;
   created_at: string;
 }

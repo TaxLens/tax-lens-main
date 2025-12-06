@@ -6,9 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TransactionCard, TransactionCardSkeleton } from '@/components/TransactionCard';
 import { api, Transaction } from '@/lib/api';
-import { CATEGORIES, formatCurrency, formatDate, getCategoryColor, getCategoryLabel } from '@/lib/utils';
+import { CATEGORIES, TAX_RELIEF_CATEGORIES, formatCurrency, formatDate, getCategoryColor, getCategoryLabel, getTaxReliefColor, getTaxReliefLabel, getTaxReliefLimit } from '@/lib/utils';
 import { 
-  Search, 
   Filter, 
   X, 
   ChevronLeft, 
@@ -18,7 +17,8 @@ import {
   Mail,
   Trash2,
   Edit2,
-  Save
+  Save,
+  Shield
 } from 'lucide-react';
 
 function TransactionsContent() {
@@ -36,9 +36,9 @@ function TransactionsContent() {
   // Filters
   const [filters, setFilters] = useState({
     category: '',
+    taxReliefCategory: '',
     startDate: '',
     endDate: '',
-    search: '',
   });
   const [showFilters, setShowFilters] = useState(false);
   
@@ -51,6 +51,7 @@ function TransactionsContent() {
     try {
       const response = await api.getTransactions({
         category: filters.category || undefined,
+        taxReliefCategory: filters.taxReliefCategory || undefined,
         startDate: filters.startDate || undefined,
         endDate: filters.endDate || undefined,
         limit,
@@ -92,7 +93,7 @@ function TransactionsContent() {
   };
 
   const clearFilters = () => {
-    setFilters({ category: '', startDate: '', endDate: '', search: '' });
+    setFilters({ category: '', taxReliefCategory: '', startDate: '', endDate: '' });
     setPage(0);
   };
 
@@ -115,7 +116,9 @@ function TransactionsContent() {
         merchant: selectedTransaction.merchant,
         amount: selectedTransaction.amount,
         category: selectedTransaction.category,
+        tax_relief_category: selectedTransaction.tax_relief_category,
         transaction_date: selectedTransaction.transaction_date,
+        description: selectedTransaction.description,
       });
       setIsEditing(true);
     }
@@ -149,7 +152,7 @@ function TransactionsContent() {
   };
 
   const totalPages = Math.ceil(total / limit);
-  const hasActiveFilters = filters.category || filters.startDate || filters.endDate;
+  const hasActiveFilters = filters.category || filters.taxReliefCategory || filters.startDate || filters.endDate;
 
   if (authLoading) {
     return (
@@ -192,7 +195,7 @@ function TransactionsContent() {
         {/* Filters Panel */}
         {showFilters && (
           <div className="glass-card p-6 mb-6 animate-slide-up">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Category Filter */}
               <div>
                 <label className="block text-sm text-midnight-400 mb-2">Category</label>
@@ -207,6 +210,24 @@ function TransactionsContent() {
                       {cat.label}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              {/* Tax Relief Category Filter */}
+              <div>
+                <label className="block text-sm text-midnight-400 mb-2">Tax Relief</label>
+                <select
+                  value={filters.taxReliefCategory}
+                  onChange={(e) => handleFilterChange('taxReliefCategory', e.target.value)}
+                  className="w-full px-4 py-2 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
+                >
+                  <option value="">All Tax Categories</option>
+                  {TAX_RELIEF_CATEGORIES.filter(c => c.value !== 'non_deductible').map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                  <option value="non_deductible">Non-Deductible</option>
                 </select>
               </div>
 
@@ -341,6 +362,21 @@ function TransactionsContent() {
                   )}
                 </div>
 
+                {/* Description */}
+                <div>
+                  <label className="block text-sm text-midnight-400 mb-2">Description</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editData.description || ''}
+                      onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-4 py-2 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
+                    />
+                  ) : (
+                    <p>{selectedTransaction.description || '-'}</p>
+                  )}
+                </div>
+
                 {/* Amount */}
                 <div>
                   <label className="block text-sm text-midnight-400 mb-2">Amount</label>
@@ -391,6 +427,45 @@ function TransactionsContent() {
                   )}
                 </div>
 
+                {/* Tax Relief Category */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-midnight-400 mb-2">
+                    <Shield className="w-4 h-4" />
+                    Tax Relief Category
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={editData.tax_relief_category || ''}
+                      onChange={(e) => setEditData(prev => ({ ...prev, tax_relief_category: e.target.value }))}
+                      className="w-full px-4 py-2 bg-midnight-800 border border-midnight-700 rounded-xl text-white focus:border-accent-500 focus:outline-none"
+                    >
+                      <option value="">Select tax relief category</option>
+                      {TAX_RELIEF_CATEGORIES.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label} (RM{cat.limit.toLocaleString()} limit)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div>
+                      <span
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                        style={{
+                          backgroundColor: `${getTaxReliefColor(selectedTransaction.tax_relief_category)}15`,
+                          color: getTaxReliefColor(selectedTransaction.tax_relief_category),
+                        }}
+                      >
+                        {getTaxReliefLabel(selectedTransaction.tax_relief_category)}
+                      </span>
+                      {selectedTransaction.tax_relief_category && selectedTransaction.tax_relief_category !== 'non_deductible' && (
+                        <p className="text-sm text-midnight-400 mt-2">
+                          Relief limit: {formatCurrency(getTaxReliefLimit(selectedTransaction.tax_relief_category))}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Date */}
                 <div>
                   <label className="flex items-center gap-2 text-sm text-midnight-400 mb-2">
@@ -420,6 +495,14 @@ function TransactionsContent() {
                     <p className="text-sm text-midnight-400 line-clamp-3">
                       {selectedTransaction.email_snippet || 'No preview available'}
                     </p>
+                    {selectedTransaction.email_date && (
+                      <p className="text-xs text-midnight-500 mt-2">
+                        Received: {new Date(selectedTransaction.email_date).toLocaleString('en-MY', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -497,4 +580,3 @@ export default function TransactionsPage() {
     </Suspense>
   );
 }
-

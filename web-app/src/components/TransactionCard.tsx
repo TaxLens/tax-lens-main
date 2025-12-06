@@ -1,7 +1,7 @@
 'use client';
 
 import { Transaction } from '@/lib/api';
-import { formatCurrency, formatDate, getCategoryColor, getCategoryLabel } from '@/lib/utils';
+import { formatCurrency, formatDate, getCategoryColor, getCategoryLabel, getTaxReliefColor, getTaxReliefLabel } from '@/lib/utils';
 import { 
   Utensils, 
   Car, 
@@ -13,7 +13,11 @@ import {
   Heart, 
   GraduationCap, 
   MoreHorizontal,
-  Mail
+  Mail,
+  Shield,
+  Baby,
+  Dumbbell,
+  Smartphone
 } from 'lucide-react';
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -26,6 +30,10 @@ const categoryIcons: Record<string, React.ElementType> = {
   travel: Plane,
   health: Heart,
   education: GraduationCap,
+  insurance: Shield,
+  childcare: Baby,
+  sports: Dumbbell,
+  electronics: Smartphone,
   other: MoreHorizontal,
 };
 
@@ -37,6 +45,8 @@ interface TransactionCardProps {
 export function TransactionCard({ transaction, onClick }: TransactionCardProps) {
   const Icon = categoryIcons[transaction.category || 'other'] || MoreHorizontal;
   const categoryColor = getCategoryColor(transaction.category);
+  const taxReliefColor = getTaxReliefColor(transaction.tax_relief_category);
+  const isTaxDeductible = transaction.tax_relief_category && transaction.tax_relief_category !== 'non_deductible';
 
   return (
     <div
@@ -58,17 +68,28 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
             <h3 className="font-semibold truncate">
               {transaction.merchant || 'Unknown Merchant'}
             </h3>
-            {transaction.confidence_score && transaction.confidence_score < 0.8 && (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                Low confidence
+            {isTaxDeductible && (
+              <span 
+                className="px-2 py-0.5 text-xs rounded-full border"
+                style={{ 
+                  backgroundColor: `${taxReliefColor}15`,
+                  borderColor: `${taxReliefColor}30`,
+                  color: taxReliefColor 
+                }}
+              >
+                Tax Relief
               </span>
             )}
           </div>
           <div className="flex items-center gap-3 text-sm text-midnight-400">
-            <span className="flex items-center gap-1">
-              <Mail className="w-3.5 h-3.5" />
-              <span className="truncate max-w-[200px]">{transaction.email_subject || 'No subject'}</span>
-            </span>
+            {transaction.description ? (
+              <span className="truncate max-w-[250px]">{transaction.description}</span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <Mail className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[200px]">{transaction.email_subject || 'No subject'}</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -83,19 +104,34 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
         </div>
       </div>
 
-      {/* Category Badge */}
+      {/* Category Badges */}
       <div className="mt-3 flex items-center justify-between">
-        <span
-          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-          style={{ 
-            backgroundColor: `${categoryColor}15`,
-            color: categoryColor,
-            borderColor: `${categoryColor}30`,
-            borderWidth: 1
-          }}
-        >
-          {getCategoryLabel(transaction.category)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+            style={{ 
+              backgroundColor: `${categoryColor}15`,
+              color: categoryColor,
+              borderColor: `${categoryColor}30`,
+              borderWidth: 1
+            }}
+          >
+            {getCategoryLabel(transaction.category)}
+          </span>
+          {isTaxDeductible && (
+            <span
+              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+              style={{ 
+                backgroundColor: `${taxReliefColor}15`,
+                color: taxReliefColor,
+                borderColor: `${taxReliefColor}30`,
+                borderWidth: 1
+              }}
+            >
+              {getTaxReliefLabel(transaction.tax_relief_category)}
+            </span>
+          )}
+        </div>
         <span className="text-xs text-midnight-500 opacity-0 group-hover:opacity-100 transition-opacity">
           Click to view details
         </span>
@@ -118,10 +154,10 @@ export function TransactionCardSkeleton() {
           <div className="h-4 w-16 rounded skeleton" />
         </div>
       </div>
-      <div className="mt-3">
+      <div className="mt-3 flex gap-2">
         <div className="h-6 w-24 rounded-full skeleton" />
+        <div className="h-6 w-28 rounded-full skeleton" />
       </div>
     </div>
   );
 }
-

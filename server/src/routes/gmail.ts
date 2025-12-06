@@ -32,8 +32,8 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
       }
     }
 
-    // Fetch emails from Gmail
-    const maxResults = req.body.maxResults || 30;
+    // Fetch ALL primary emails from 1st of current month
+    const maxResults = req.body.maxResults || 200; // Increased default
     let emails;
     
     try {
@@ -53,7 +53,7 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
 
     if (emails.length === 0) {
       return res.json({ 
-        message: 'No new emails found',
+        message: 'No emails found for this month',
         processed: 0,
         transactions: 0 
       });
@@ -76,6 +76,8 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
       });
     }
 
+    console.log(`Analyzing ${newEmails.length} new emails with Claude...`);
+
     // Analyze emails with Claude
     const analysisResults = await analyzeMultipleEmails(newEmails);
 
@@ -85,6 +87,7 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
     for (const email of newEmails) {
       const analysis = analysisResults.get(email.id);
       
+      // Only save if it's a real transaction with good confidence
       if (analysis?.isTransaction && analysis.confidenceScore >= 0.6) {
         transactionsToInsert.push({
           user_id: userId,
@@ -93,9 +96,12 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
           amount: analysis.amount,
           currency: analysis.currency,
           category: analysis.category,
+          tax_relief_category: analysis.taxReliefCategory,
           transaction_date: analysis.transactionDate,
           email_subject: email.subject,
           email_snippet: email.snippet,
+          email_date: email.date,
+          description: analysis.description,
           confidence_score: analysis.confidenceScore,
         });
       }
@@ -121,6 +127,7 @@ router.post('/sync', authenticateToken, async (req: AuthRequest, res: Response) 
       message: 'Sync completed',
       processed: newEmails.length,
       transactions: transactionsToInsert.length,
+      totalEmails: emails.length,
     });
   } catch (error) {
     console.error('Sync error:', error);
@@ -152,4 +159,3 @@ router.get('/status', authenticateToken, async (req: AuthRequest, res: Response)
 });
 
 export default router;
-

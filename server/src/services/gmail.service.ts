@@ -74,70 +74,108 @@ export async function refreshAccessToken(userId: string): Promise<string | null>
   return null;
 }
 
+/**
+ * Get the first day of the current month in YYYY/MM/DD format for Gmail query
+ */
+function getFirstDayOfCurrentMonth(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1; // getMonth() is 0-indexed
+  return `${year}/${month}/1`;
+}
+
+/**
+ * Fetch all primary inbox emails from the 1st of the current month
+ */
 export async function fetchEmails(
   accessToken: string,
-  maxResults: number = 50,
-  query: string = ''
+  maxResults: number = 100
 ): Promise<EmailMessage[]> {
   oauth2Client.setCredentials({ access_token: accessToken });
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  // Search for potential transaction emails
-  const transactionQuery = query || 'subject:(receipt OR invoice OR payment OR order OR purchase OR transaction OR confirmation) newer_than:30d';
+  // Get the first day of current month
+  const firstDayOfMonth = getFirstDayOfCurrentMonth();
+  
+  // Query: Primary inbox emails from 1st of current month
+  // category:primary ensures we only get main inbox emails (not promotions, social, updates)
+  const query = `category:primary after:${firstDayOfMonth}`;
+  
+  console.log(`Fetching emails with query: ${query}`);
 
-  const listResponse = await gmail.users.messages.list({
-    userId: 'me',
-    maxResults,
-    q: transactionQuery,
-  });
-
-  const messages = listResponse.data.messages || [];
   const emails: EmailMessage[] = [];
+  let pageToken: string | undefined;
 
-  for (const message of messages) {
-    if (!message.id) continue;
-
-    const msgResponse = await gmail.users.messages.get({
+  // Fetch all emails (paginated) up to maxResults
+  do {
+    const listResponse = await gmail.users.messages.list({
       userId: 'me',
-      id: message.id,
-      format: 'full',
+      maxResults: Math.min(maxResults - emails.length, 100),
+      q: query,
+      pageToken,
     });
 
-    const msgData = msgResponse.data;
-    const headers = msgData.payload?.headers || [];
+    const messages = listResponse.data.messages || [];
+    pageToken = listResponse.data.nextPageToken || undefined;
 
-    const getHeader = (name: string) =>
-      headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
+    for (const message of messages) {
+      if (!message.id || emails.length >= maxResults) continue;
 
-    // Extract body
-    let body = '';
-    const payload = msgData.payload;
-    
-    if (payload?.body?.data) {
-      body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
-    } else if (payload?.parts) {
-      for (const part of payload.parts) {
-        if (part.mimeType === 'text/plain' && part.body?.data) {
-          body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-          break;
+      try {
+        const msgResponse = await gmail.users.messages.get({
+          userId: 'me',
+          id: message.id,
+          format: 'full',
+        });
+
+        const msgData = msgResponse.data;
+        const headers = msgData.payload?.headers || [];
+
+        const getHeader = (name: string) =>
+          headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
+
+        // Extract body
+        let body = '';
+        const payload = msgData.payload;
+        
+        if (payload?.body?.data) {
+          body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+        } else if (payload?.parts) {
+          for (const part of payload.parts) {
+            if (part.mimeType === 'text/plain' && part.body?.data) {
+              body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+              break;
+            }
+            if (part.mimeType === 'text/html' && part.body?.data && !body) {
+              body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+            }
+            // Handle nested parts (multipart messages)
+            if (part.parts) {
+              for (const nestedPart of part.parts) {
+                if (nestedPart.mimeType === 'text/plain' && nestedPart.body?.data) {
+                  body = Buffer.from(nestedPart.body.data, 'base64').toString('utf-8');
+                  break;
+                }
+              }
+            }
+          }
         }
-        if (part.mimeType === 'text/html' && part.body?.data && !body) {
-          body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-        }
+
+        emails.push({
+          id: message.id,
+          threadId: message.threadId || '',
+          subject: getHeader('Subject'),
+          from: getHeader('From'),
+          date: getHeader('Date'),
+          snippet: msgData.snippet || '',
+          body: body.substring(0, 8000), // Increased limit for better context
+        });
+      } catch (err) {
+        console.error(`Error fetching message ${message.id}:`, err);
       }
     }
+  } while (pageToken && emails.length < maxResults);
 
-    emails.push({
-      id: message.id,
-      threadId: message.threadId || '',
-      subject: getHeader('Subject'),
-      from: getHeader('From'),
-      date: getHeader('Date'),
-      snippet: msgData.snippet || '',
-      body: body.substring(0, 5000), // Limit body size
-    });
-  }
-
+  console.log(`Fetched ${emails.length} emails from primary inbox since ${firstDayOfMonth}`);
   return emails;
 }
-
