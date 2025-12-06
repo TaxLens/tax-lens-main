@@ -683,14 +683,37 @@ function TaxSummaryCard({
                 {formatCurrency(annualSalary)}
               </p>
             </div>
-            <div>
-              <p className="text-midnight-400 text-sm mb-1">Total Deductions</p>
+            <div className="relative group">
+              <p className="text-midnight-400 text-sm mb-1 flex items-center gap-1">
+                Total Deductions
+                <span className="text-midnight-500 cursor-help">ⓘ</span>
+              </p>
               <p className="text-xl font-bold font-mono text-accent-400">
                 {formatCurrency(taxCalculation.totalDeductions)}
               </p>
-              <p className="text-xs text-midnight-500">
-                Personal + EPF + Tracked
-              </p>
+              
+              {/* Tooltip */}
+              <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-midnight-900 border border-midnight-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                <p className="text-xs text-midnight-400 mb-2 font-medium">Breakdown:</p>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-midnight-400">Personal Relief</span>
+                    <span className="font-mono text-white">{formatCurrency(PERSONAL_RELIEF)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-400">EPF Relief</span>
+                    <span className="font-mono text-white">{formatCurrency(taxCalculation.epfDetails.epfTaxRelief)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-midnight-400">Tracked Expenses</span>
+                    <span className="font-mono text-white">{formatCurrency(totalTaxRelief)}</span>
+                  </div>
+                  <div className="border-t border-midnight-700 pt-1 mt-1 flex justify-between font-medium">
+                    <span className="text-midnight-300">Total</span>
+                    <span className="font-mono text-accent-400">{formatCurrency(taxCalculation.totalDeductions)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div>
               <p className="text-midnight-400 text-sm mb-1">Chargeable Income</p>
@@ -706,16 +729,6 @@ function TaxSummaryCard({
               <p className="text-xs text-midnight-500">
                 Effective rate: {taxCalculation.effectiveRate}%
               </p>
-            </div>
-          </div>
-
-          {/* Deduction Breakdown */}
-          <div className="p-4 bg-midnight-800/50 rounded-xl mb-4">
-            <p className="text-sm text-midnight-400 mb-2">Deduction Breakdown:</p>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <span>Personal Relief: <span className="font-mono text-white">{formatCurrency(PERSONAL_RELIEF)}</span></span>
-              <span>EPF Relief: <span className="font-mono text-white">{formatCurrency(taxCalculation.epfDetails.epfTaxRelief)}</span></span>
-              <span>Tracked Expenses: <span className="font-mono text-white">{formatCurrency(totalTaxRelief)}</span></span>
             </div>
           </div>
 
