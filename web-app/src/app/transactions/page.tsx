@@ -22,8 +22,12 @@ import {
   Edit2,
   Save,
   Shield,
-  ChevronDown
+  ChevronDown,
+  Image,
+  FolderOpen,
+  ExternalLink
 } from 'lucide-react';
+import Link from 'next/link';
 
 // Get available tax years
 function getAvailableTaxYears(): number[] {
@@ -475,6 +479,43 @@ function TransactionsContent() {
                     </p>
                   )}
                 </div>
+
+                {/* Receipt Image */}
+                {selectedTransaction.receipt_url && (
+                  <div className="pt-4 border-t border-midnight-800">
+                    <label className="flex items-center gap-2 text-sm text-midnight-400 mb-2">
+                      <Image className="w-4 h-4" />
+                      Receipt Image
+                    </label>
+                    <div className="space-y-3">
+                      <a
+                        href={selectedTransaction.receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block relative group"
+                      >
+                        <img
+                          src={selectedTransaction.receipt_url}
+                          alt="Receipt"
+                          className="w-full max-h-48 object-contain rounded-xl border border-midnight-700 bg-midnight-800"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                          <span className="flex items-center gap-2 text-white text-sm font-medium">
+                            <ExternalLink className="w-4 h-4" />
+                            View Full Size
+                          </span>
+                        </div>
+                      </a>
+                      <Link
+                        href="/files"
+                        className="flex items-center gap-2 text-sm text-accent-400 hover:text-accent-300 transition-colors"
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                        View in Files
+                      </Link>
+                    </div>
+                  </div>
+                )}
 
                 {/* Category */}
                 <div>

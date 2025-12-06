@@ -38,6 +38,7 @@ export interface Transaction {
   email_date: string | null;
   description: string | null;
   confidence_score: number | null;
+  receipt_url: string | null;
   created_at: string;
 }
 

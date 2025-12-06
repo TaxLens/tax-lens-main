@@ -162,6 +162,20 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Files endpoints
+  async getFiles(): Promise<FilesResponse> {
+    return this.request("/files");
+  }
+
+  async getFilesByYear(year: number): Promise<YearReceipts> {
+    return this.request(`/files/${year}`);
+  }
+
+  getDownloadUrl(year: number): string {
+    const token = this.getToken();
+    return `${API_BASE_URL}/files/download/${year}?token=${token}`;
+  }
 }
 
 // Types
@@ -188,6 +202,7 @@ export interface Transaction {
   email_date: string | null;
   description: string | null;
   confidence_score: number | null;
+  receipt_url: string | null;
   created_at: string;
 }
 
@@ -259,6 +274,11 @@ export interface ReceiptScanResult {
     description: string | null;
     confidenceScore: number;
   };
+  fileData?: {
+    base64: string;
+    mimeType: string;
+    originalName: string;
+  };
 }
 
 export interface CreateTransactionData {
@@ -269,6 +289,33 @@ export interface CreateTransactionData {
   taxReliefCategory?: string | null;
   transactionDate?: string | null;
   description?: string | null;
+  fileData?: {
+    base64: string;
+    mimeType: string;
+    originalName: string;
+  };
+}
+
+export interface ReceiptFile {
+  id: string;
+  transactionId: string;
+  merchant: string | null;
+  amount: number | null;
+  transactionDate: string | null;
+  receiptUrl: string;
+  fileName: string;
+  year: number;
+}
+
+export interface YearReceipts {
+  year: number;
+  receipts: ReceiptFile[];
+  count: number;
+}
+
+export interface FilesResponse {
+  years: YearReceipts[];
+  totalCount: number;
 }
 
 export const api = new ApiClient();

@@ -35,6 +35,7 @@ export function ReceiptScannerModal({
   const [scanResult, setScanResult] = useState<
     ReceiptScanResult["data"] | null
   >(null);
+  const [fileData, setFileData] = useState<ReceiptScanResult["fileData"] | null>(null);
   const [editedData, setEditedData] = useState<Partial<CreateTransactionData>>(
     {}
   );
@@ -65,6 +66,7 @@ export function ReceiptScannerModal({
     setPreview(null);
     setFile(null);
     setScanResult(null);
+    setFileData(null);
     setEditedData({});
     stopCamera();
   }, []);
@@ -159,6 +161,10 @@ export function ReceiptScannerModal({
     try {
       const result = await api.scanReceipt(receiptFile);
       setScanResult(result.data);
+      // Store file data for later upload
+      if (result.fileData) {
+        setFileData(result.fileData);
+      }
       setEditedData({
         merchant: result.data.merchant || "",
         amount: result.data.amount || 0,
@@ -185,9 +191,12 @@ export function ReceiptScannerModal({
     setStep("saving");
 
     try {
-      await api.createTransactionFromReceipt(
-        editedData as CreateTransactionData
-      );
+      // Include fileData for storage upload
+      const dataWithFile: CreateTransactionData = {
+        ...(editedData as CreateTransactionData),
+        fileData: fileData || undefined,
+      };
+      await api.createTransactionFromReceipt(dataWithFile);
       setStep("success");
       setTimeout(() => {
         onTransactionCreated?.();

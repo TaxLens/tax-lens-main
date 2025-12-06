@@ -16,11 +16,13 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  FolderOpen,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/transactions", icon: Receipt, label: "Transactions" },
+  { href: "/files", icon: FolderOpen, label: "Files" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
