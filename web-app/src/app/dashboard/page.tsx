@@ -167,8 +167,6 @@ export default function DashboardPage() {
               onYearChange={setSelectedYear}
               onSync={handleSync}
               isSyncing={isSyncing}
-              syncStatus={syncStatus}
-              onFileMyTax={() => {}}
             />
           </div>
         </div>
