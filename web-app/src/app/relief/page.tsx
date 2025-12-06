@@ -20,6 +20,13 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for PDF button (client-side only - ESM package)
+const PDFDownloadButton = dynamic(
+  () => import('@/components/reports/PDFDownloadButton').then(mod => mod.PDFDownloadButton),
+  { ssr: false, loading: () => null }
+);
 
 // Get available tax years
 function getAvailableTaxYears(): number[] {
@@ -115,7 +122,7 @@ export default function ReliefPage() {
       
       <main className={`p-8 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} ml-0 pt-16 md:pt-8`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-4 mb-2">
               <h1 className="text-3xl font-display font-bold">
@@ -155,6 +162,16 @@ export default function ReliefPage() {
               Track your tax deductions against LHDN limits for YA {selectedYear}
             </p>
           </div>
+
+          {/* Download Report Button */}
+          {!isLoading && (
+            <PDFDownloadButton
+              year={selectedYear}
+              annualSalary={annualSalary}
+              reliefData={summary?.byTaxRelief || {}}
+              totalTrackedRelief={summary?.totalTaxRelief || 0}
+            />
+          )}
         </div>
 
         {/* Summary Card */}
