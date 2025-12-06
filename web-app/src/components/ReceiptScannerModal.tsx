@@ -310,38 +310,42 @@ export function ReceiptScannerModal({
           {step === "capture" && (
             <div className="h-full flex flex-col">
               {isCameraActive ? (
-                <div className="relative flex-1 bg-black overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                  <canvas ref={canvasRef} className="hidden" />
-                  
-                  {/* Camera Overlay - Adjusted for desktop/mobile */}
-                  <div className="absolute inset-0 border-[40px] border-black/50 pointer-events-none flex items-center justify-center">
-                    <div className={`border-2 border-white/30 relative ${isDesktop ? 'w-[400px] h-[600px]' : 'w-full h-full'}`}>
-                      <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-accent-400 -mt-1 -ml-1" />
-                      <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-accent-400 -mt-1 -mr-1" />
-                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-accent-400 -mb-1 -ml-1" />
-                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-accent-400 -mb-1 -mr-1" />
+                <div className="flex-1 flex flex-col bg-black overflow-hidden">
+                  {/* Camera View - Takes most of the space */}
+                  <div className="relative flex-1 min-h-0">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                    <canvas ref={canvasRef} className="hidden" />
+                    
+                    {/* Lightweight corner guides overlay */}
+                    <div className="absolute inset-4 pointer-events-none">
+                      <div className="relative w-full h-full">
+                        <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-accent-400 rounded-tl-lg" />
+                        <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-accent-400 rounded-tr-lg" />
+                        <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-accent-400 rounded-bl-lg" />
+                        <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-accent-400 rounded-br-lg" />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-8 pointer-events-auto">
+                  {/* Camera Controls Footer - Separate from video */}
+                  <div className="bg-midnight-950 px-6 py-6 flex items-center justify-center gap-8 border-t border-midnight-800">
                     <button
                       onClick={stopCamera}
-                      className="w-12 h-12 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                      className="w-12 h-12 rounded-full bg-midnight-800 hover:bg-midnight-700 flex items-center justify-center text-white transition-colors"
                     >
                       <X className="w-5 h-5" />
                     </button>
                     <button
                       onClick={capturePhoto}
-                      className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg transform active:scale-95 transition-transform"
+                      className="w-18 h-18 bg-white rounded-full flex items-center justify-center shadow-lg transform active:scale-95 transition-transform"
                     >
-                      <div className="w-16 h-16 bg-white rounded-full border-[4px] border-midnight-900" />
+                      <div className="w-14 h-14 bg-white rounded-full border-[4px] border-midnight-900" />
                     </button>
                     <div className="w-12 h-12" /> {/* Spacer for balance */}
                   </div>

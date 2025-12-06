@@ -48,11 +48,11 @@ export function FilingReadinessWidget({
   const progress = (completedCount / (steps.length - 1)) * 100; // Excluding final submission from progress calculation usually
 
   return (
-    <div className="glass-card p-6 h-full flex flex-col">
+    <div className="glass-card p-6 flex flex-col">
       <h3 className="font-semibold text-lg mb-1">Filing Readiness</h3>
       <p className="text-xs text-midnight-400 mb-4">Prepare for Year of Assessment {filingYear}</p>
 
-      <div className="space-y-4 flex-1">
+      <div className="space-y-4">
         {steps.map((step, index) => (
           <div key={step.id} className="flex items-start gap-3">
             <div className={`mt-0.5 ${step.completed ? 'text-green-400' : 'text-midnight-600'}`}>

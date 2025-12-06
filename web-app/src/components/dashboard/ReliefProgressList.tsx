@@ -57,7 +57,7 @@ export function ReliefProgressList({ reliefs, isLoading }: ReliefProgressListPro
   const topReliefs = processedReliefs.slice(0, 6);
 
   return (
-    <div className="glass-card p-6 h-full flex flex-col">
+    <div className="glass-card p-6 flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-semibold text-lg">Relief Utilization</h3>
         <Link
@@ -70,7 +70,7 @@ export function ReliefProgressList({ reliefs, isLoading }: ReliefProgressListPro
       </div>
 
       {topReliefs.length > 0 ? (
-        <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar flex-1">
+        <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar max-h-[350px]">
           {topReliefs.map((relief) => (
             <div key={relief.key} className="group">
               <div className="flex items-center justify-between mb-1.5 text-sm">
@@ -109,7 +109,7 @@ export function ReliefProgressList({ reliefs, isLoading }: ReliefProgressListPro
           ))}
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-center text-midnight-400 py-8">
+        <div className="flex flex-col items-center justify-center text-center text-midnight-400 py-8">
           <div className="w-12 h-12 rounded-full bg-midnight-800 flex items-center justify-center mb-3">
             <Info className="w-5 h-5 text-midnight-400" />
           </div>
