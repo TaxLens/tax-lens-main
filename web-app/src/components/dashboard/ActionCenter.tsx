@@ -9,8 +9,6 @@ interface ActionCenterProps {
   onYearChange: (year: number) => void;
   onSync: () => void;
   isSyncing: boolean;
-  syncStatus: { lastSyncAt?: string } | null;
-  onFileMyTax: () => void;
 }
 
 export function ActionCenter({
@@ -19,8 +17,6 @@ export function ActionCenter({
   onYearChange,
   onSync,
   isSyncing,
-  syncStatus,
-  onFileMyTax
 }: ActionCenterProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

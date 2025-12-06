@@ -3,14 +3,6 @@
 import { formatCurrency, getTaxReliefColor } from "@/lib/utils";
 import { ArrowRight, Info } from "lucide-react";
 import Link from "next/link";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"; // Assuming we might need to create a simple tooltip if not available, or use browser title for now. 
-// Actually, let's stick to standard HTML title or custom hover for simplicity unless shadcn is present.
-// Checking project layout... no shadcn/ui components evident in layout, so I'll implement a simple custom tooltip or just use standard UI patterns.
 
 interface ReliefData {
   name: string;
