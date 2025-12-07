@@ -10,6 +10,13 @@ export default function HomePage() {
   const { isAuthenticated, isLoading, login } = useAuth();
   const router = useRouter();
 
+  // Warm up backend on landing page load to prevent cold start delays
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/health`)
+      .then(res => res.json())
+      .catch(err => console.log('Backend warmup failed:', err));
+  }, []);
+
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       router.push("/dashboard");
