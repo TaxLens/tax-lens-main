@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Mail, Receipt, Calculator, Shield, Sparkles, FileText, Zap, ExternalLink, Server } from "lucide-react";
 
-const WARMUP_DURATION = 20; // seconds
+const WARMUP_DURATION = 35; // seconds
 
 export default function HomePage() {
   const { isAuthenticated, isLoading, login } = useAuth();
