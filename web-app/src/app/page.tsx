@@ -1,20 +1,70 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Mail, Receipt, Calculator, Shield, Sparkles, FileText, Zap, ExternalLink } from "lucide-react";
+import { Mail, Receipt, Calculator, Shield, Sparkles, FileText, Zap, ExternalLink, Server } from "lucide-react";
+
+const WARMUP_DURATION = 20; // seconds
 
 export default function HomePage() {
   const { isAuthenticated, isLoading, login } = useAuth();
   const router = useRouter();
+  const [isWarmingUp, setIsWarmingUp] = useState(true);
+  const [warmupProgress, setWarmupProgress] = useState(0);
+  const [backendReady, setBackendReady] = useState(false);
 
-  // Warm up backend on landing page load to prevent cold start delays
+  // Backend warmup with repeated pings
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/health`)
-      .then(res => res.json())
-      .catch(err => console.log('Backend warmup failed:', err));
+    let pingInterval: NodeJS.Timeout;
+    let progressInterval: NodeJS.Timeout;
+    let warmupTimeout: NodeJS.Timeout;
+
+    const pingBackend = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/health`);
+        if (res.ok) {
+          setBackendReady(true);
+          // Backend is ready, can skip warmup now
+          setTimeout(() => {
+            setIsWarmingUp(false);
+            clearInterval(pingInterval);
+            clearInterval(progressInterval);
+            clearTimeout(warmupTimeout);
+          }, 1500); // Small delay to show "Backend ready" message
+        }
+      } catch (err) {
+        // Backend not ready yet, continue pinging
+      }
+    };
+
+    // Start pinging immediately
+    pingBackend();
+
+    // Ping every second
+    pingInterval = setInterval(pingBackend, 1000);
+
+    // Update progress bar
+    progressInterval = setInterval(() => {
+      setWarmupProgress(prev => {
+        const newProgress = prev + (100 / WARMUP_DURATION);
+        return Math.min(newProgress, 100);
+      });
+    }, 1000);
+
+    // End warmup after duration
+    warmupTimeout = setTimeout(() => {
+      setIsWarmingUp(false);
+      clearInterval(pingInterval);
+      clearInterval(progressInterval);
+    }, WARMUP_DURATION * 1000);
+
+    return () => {
+      clearInterval(pingInterval);
+      clearInterval(progressInterval);
+      clearTimeout(warmupTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -22,6 +72,50 @@ export default function HomePage() {
       router.push("/dashboard");
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Warmup loading screen
+  if (isWarmingUp) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center mesh-bg">
+        {/* Animated background */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-accent-500/10 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-coral-500/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: "1s" }} />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center">
+              <Image src="/logo.png" alt="TaxLens" width={64} height={64} />
+            </div>
+          </div>
+
+          <h1 className="font-display text-3xl font-bold gradient-text mb-2">TaxLens</h1>
+          <p className="text-midnight-400 mb-8">Preparing your experience...</p>
+
+          {/* Progress bar */}
+          <div className="w-64 h-2 bg-midnight-800 rounded-full overflow-hidden mb-4">
+            <div 
+              className="h-full bg-gradient-to-r from-accent-500 to-accent-400 transition-all duration-1000 ease-linear"
+              style={{ width: `${warmupProgress}%` }}
+            />
+          </div>
+
+          {/* Status indicators */}
+          <div className="flex flex-col items-center gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Server className={`w-4 h-4 ${backendReady ? 'text-green-400' : 'text-accent-400 animate-pulse'}`} />
+              <span className={backendReady ? 'text-green-400' : 'text-midnight-400'}>
+                {backendReady ? 'Backend ready' : 'Waking up server...'}
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
